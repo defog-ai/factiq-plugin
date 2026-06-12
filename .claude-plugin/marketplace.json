@@ -1,0 +1,11 @@
+{
+  "name": "factiq",
+  "owner": { "name": "Defog" },
+  "plugins": [
+    {
+      "name": "factiq",
+      "source": "./",
+      "description": "Answer economic and financial data questions with real data from FactIQ — and publish shareable charts."
+    }
+  ]
+}

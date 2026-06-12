@@ -51,6 +51,9 @@ in the environment first, then `api_key` in `~/.factiq/config.json`.
    # Non-interactive: --key fiq_... also works
    ```
 
+   If this skill is installed as a plugin, `/factiq:set-key` walks the user
+   through the same steps.
+
 2. The API defaults to `https://api.worlddb.ai` and the web origin (for share
    links) to `https://factiq.com`. For local development override with
    `FACTIQ_API_URL=http://localhost:8000` and

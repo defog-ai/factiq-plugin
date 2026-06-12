@@ -1,19 +1,41 @@
-# FactIQ Claude Code Skill
+# FactIQ Claude Code Plugin
 
-A [Claude Code skill](https://code.claude.com/docs/en/skills) that lets Claude
-answer economic and financial data questions using FactIQ's data tools over
-HTTP — catalog search, read-only SQL, series lookup, market data,
+A [Claude Code plugin](https://code.claude.com/docs/en/plugins) that lets
+Claude answer economic and financial data questions using FactIQ's data tools
+over HTTP — catalog search, read-only SQL, series lookup, market data,
 earnings-call search, and shareable chart publishing. Claude orchestrates the
 whole analysis itself; no codebase or database access is required, only a
 FactIQ account.
 
 ## Install
 
-Copy (or clone) this folder to your Claude Code skills directory:
+Inside Claude Code (requires GitHub access to this repo — `gh auth login`
+or equivalent git credentials):
+
+```
+/plugin marketplace add defog-ai/factiq-skill
+/plugin install factiq@factiq
+```
+
+This adds the skill (Claude invokes it automatically for economic/financial
+data questions) plus three slash commands:
+
+| Command | Purpose |
+|---|---|
+| `/factiq:set-key` | Store your FactIQ API key (guides you through getting one) |
+| `/factiq:status` | Check auth, plan, and monthly usage |
+| `/factiq:ask <question>` | Run a full analysis and get a shareable chart |
+
+<details>
+<summary>Alternative: install as a plain skill (no slash commands)</summary>
 
 ```bash
 git clone git@github.com:defog-ai/factiq-skill.git ~/.claude/skills/factiq
 ```
+
+The skill auto-invokes the same way; store your key with
+`python3 ~/.claude/skills/factiq/scripts/factiq.py set-key`.
+</details>
 
 ## Get your API key
 
@@ -24,22 +46,19 @@ git clone git@github.com:defog-ai/factiq-skill.git ~/.claude/skills/factiq
 3. Copy the `fiq_...` key immediately — it is shown only once and cannot be
    retrieved later (the server stores only a hash).
 
-Then store it for the CLI:
-
-```bash
-python3 ~/.claude/skills/factiq/scripts/factiq.py set-key   # prompts, verifies, saves
-```
-
-The key is verified against the API and cached in `~/.factiq/config.json`
+Then run `/factiq:set-key` in Claude Code and follow the instructions. The
+key is verified against the API and cached in `~/.factiq/config.json`
 (chmod 600) — never stored in this folder. Alternatively, set the
 `FACTIQ_API_KEY` env var, which overrides the config.
 
 ## Contents
 
 - `SKILL.md` — the skill definition Claude loads (setup, workflow, limits)
+- `commands/` — the `/factiq:*` slash commands
 - `scripts/factiq.py` — self-contained stdlib-only CLI for the FactIQ
   `/tools/*` API (Python 3.10+, no dependencies)
 - `references/` — SQL idioms, ChartSpec format, and dataset schema overview
+- `.claude-plugin/` — plugin + marketplace manifests
 
 ## Configuration
 
