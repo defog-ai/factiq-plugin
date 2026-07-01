@@ -1,7 +1,7 @@
 # FactIQ Plugin
 
 This plugin gives you access to FactIQ's economic and financial data tools via
-MCP. Read `SKILL.md` for the full workflow, tool reference, output modes, and
+MCP. Read `skills/factiq/SKILL.md` for the full workflow, tool reference, output modes, and
 reference docs.
 
 ## Quick start
