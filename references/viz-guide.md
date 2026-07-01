@@ -114,7 +114,7 @@ If `save` can't find the transcript (an unusual harness, or `--transcript` is
 wrong), it says so — only then fall back to writing the payload with `Write`.
 For a **multi-series** viz, run one `save` per fetch, then pass every file to
 `assemble --data`. This is also how a research subagent hands raw data to a
-later charting step (see SKILL.md **Subagent orchestration**): save each fetched
+later charting step (see skills/factiq/SKILL.md **Subagent orchestration**): save each fetched
 result to a file and return the path, instead of re-querying FactIQ or retyping.
 
 ## The data contract

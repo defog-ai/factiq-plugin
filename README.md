@@ -99,10 +99,11 @@ covers both data fetching and publishing.
 
 - `.mcp.json` — declares the bundled FactIQ MCP server (Streamable HTTP,
   OAuth). Read by both Claude Code and Codex plugin loaders.
-- `SKILL.md` — the Claude Code skill definition and repo-local source of truth
-  for the workflow
-- `skills/factiq/SKILL.md` — the Codex-packaged copy of the skill
-- `AGENTS.md` — Codex project-level instructions (points to SKILL.md)
+- `skills/factiq/SKILL.md` — the skill definition and single source of truth for
+  the workflow. Auto-discovered by both Claude Code and Codex from the `skills/`
+  directory
+- `AGENTS.md` — Codex project-level instructions (points to
+  `skills/factiq/SKILL.md`)
 - `commands/ask.md` — the `/factiq:ask` slash command (Claude Code)
 - `.agents/plugins/marketplace.json` — Codex marketplace entry for
   `codex plugin marketplace add defog-ai/factiq-plugin`

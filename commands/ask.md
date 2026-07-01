@@ -32,8 +32,8 @@ Answer this question with real data from FactIQ:
 
 > $ARGUMENTS
 
-Read `${CLAUDE_PLUGIN_ROOT}/SKILL.md` first. If no question was provided
-above, ask the user what they want to know.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/factiq/SKILL.md` first. If no question was
+provided above, ask the user what they want to know.
 
 Everything — discovery, fetching, and publishing — runs through the FactIQ MCP
 tools. If they aren't available or return an auth error, the MCP isn't
@@ -59,7 +59,7 @@ single chart could plausibly satisfy it — use the AskUserQuestion tool to
 offer the two modes, noting that the report takes noticeably longer and uses
 more of their tokens and FactIQ tool quota.
 
-Then follow SKILL.md's orchestration workflow (catalog → discover → fetch →
+Then follow the skill's orchestration workflow (catalog → discover → fetch →
 compute, all via the MCP tools) and finish per the mode:
 
 - **Quick chart** → build a ChartSpec (`references/chart-spec.md`), save it to
@@ -70,7 +70,7 @@ compute, all via the MCP tools) and finish per the mode:
 - **Terminal chart** → build a ChartSpec (`references/chart-spec.md`), save it
   to JSON, run `python3 scripts/term_chart.py render --spec <file> --charset ascii --color never`,
   and return the rendered output plus a short narrative without publishing.
-- **Detailed report** → follow SKILL.md's **Detailed reports** section and
+- **Detailed report** → follow the skill's **Detailed reports** section and
   `references/report-spec.md`, save the report object to JSON, publish with the
   `share_report` tool, run
   `python3 scripts/term_chart.py report --report <file> --charset ascii --color never`,
@@ -79,4 +79,4 @@ compute, all via the MCP tools) and finish per the mode:
 For report-mode questions that span multiple topics, companies, or data sources,
 decompose the research into parallel subagents after initial discovery — one
 agent per research thread. Then synthesize and hand off to a report-assembler
-subagent. See SKILL.md's **Subagent orchestration** section for the pattern.
+subagent. See the skill's **Subagent orchestration** section for the pattern.
