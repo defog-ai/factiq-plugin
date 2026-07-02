@@ -11,7 +11,7 @@ file. Some schemas are admin-only and simply won't appear in your
 |---|---|---|
 | `bls` | Bureau of Labor Statistics | Employment (CES), unemployment (CPS, e.g. `LNS14000000`), CPI, PPI, JOLTS job openings, wages, productivity |
 | `oews` | BLS Occupational Employment & Wage Statistics | Wages and employment by occupation and metro area |
-| `census` | Census Bureau | International trade (incl. `us_census_hs` — monthly imports/exports by HS commodity and partner country; quantity `_qty` series exist only at the 10-digit level, 6-digit lines are value-only), retail, housing, demographics |
+| `census` | Census Bureau | International trade (incl. `us_census_hs` — monthly imports/exports by HS commodity and partner country; quantity `_qty` series exist only at the 10-digit level, 6-digit lines are value-only), retail, housing, demographics, business formation applications (BFS; industry detail may be incomplete) |
 | `bea` | Bureau of Economic Analysis | GDP and components, personal income/spending, regional accounts |
 | `eia` | Energy Information Administration | Petroleum, natural gas, electricity, renewables — production, consumption, prices |
 | `ers` | USDA Economic Research Service | Agricultural and food economics |

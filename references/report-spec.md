@@ -282,3 +282,9 @@ summary.
   distributional tax detail where official data exist, named non-tax
   components, a sourced policy-promise alignment note when relevant, and clear
   timing/data-gap caveats.
+- **Business formation by industry.** For Census Business Formation Statistics
+  questions about applications by industry/NAICS, read
+  `business-formation-statistics.md` before authoring the report. Do not stop
+  at ranked tables: explain likely economic drivers, entry barriers,
+  regulation, capital intensity, incumbents, concentration metrics where
+  available, microeconomic and policy implications, and BFS caveats.
