@@ -2,9 +2,9 @@
 
 Satellite-derived indicators that exist in no statistical warehouse, fetched
 live from the provider and aggregated over a region server-side. Use them for
-signals official statistics can't see or publish too slowly: crop burning as
-it happens, industrial activity from emissions, monsoon rainfall by state,
-heatwaves, agricultural drought.
+fast-moving physical signals: crop burning as it happens, industrial
+activity from emissions, monsoon rainfall by state, heatwaves, agricultural
+drought.
 
 Read this before the first `get_geo_data` call in a session.
 
