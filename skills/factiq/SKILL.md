@@ -5,12 +5,9 @@ description: >
   (worlddb): US indicators (BLS employment/CPI, BEA GDP, Census trade, EIA
   energy, USDA ERS, BTS transport), international data (China NBS, China
   customs, India MOSPI/RBI/trade, Singapore, IMF, World Bank), stock quotes
-  and fundamentals, commodities/forex, earnings-call intelligence, and
-  satellite-derived signals (fire detections/crop burning, NO2 industrial
-  activity, monsoon rainfall, heatwaves, soil moisture — by country, state, or
-  bounding box). Use
+  and fundamentals, commodities/forex, and earnings-call intelligence. Use
   when the user asks about unemployment, inflation, GDP, trade flows, energy,
-  wages, markets, stubble burning, air quality, monsoon or drought conditions,
+  wages, markets,
   or wants a shareable economic chart or map (country choropleths,
   state/province choropleths, coordinate bubble maps), a terminal chart preview,
   a full multi-section research report, or a bespoke custom visualization or
@@ -121,7 +118,6 @@ All FactIQ tools are MCP tools provided by the `factiq` MCP server.
 | `run_sql` (`schema`, `sql`, `question?`, `explore?`, `auto_retry?`) | Read-only SELECT against one schema. The power tool for joins, pivots, aggregation. |
 | `get_series` (`schema`, `series_id`, `from_year?`, `to_year?`) | Fetch one series — timeseries, tabular, or `COMPOUND::` ids all work. |
 | `get_market_data` (`function`, `symbol?`, `interval?`, `outputsize?`) | Quotes, daily/weekly/monthly series, fundamentals (OVERVIEW, INCOME_STATEMENT, EARNINGS), FX, commodities (WTI, BRENT, GOLD), SYMBOL_SEARCH. |
-| `get_geo_data` (`dataset`, `region`, `start_date`, `end_date`, `aggregation?`) | Satellite-derived signals with no warehouse series: `fires_viirs` (crop burning, ~3h lag), `no2_tropomi` (industrial-activity proxy), `ndvi_s2` (crop condition), `precip_chirps` (rainfall), `temperature_power`, `soil_moisture_power` — aggregated over a country, state (`"India/Punjab"`), or bbox. **Read `references/satellite.md` before first use** — it covers windows (max 50 intervals), the `valid_obs_share` rule, and attribution. |
 | `search_earnings` (`query`, `search_target?`, `company_filter?`, `quarter_filter?`, `limit?`) | Full-text search over earnings-call intelligence. |
 | `get_style_guides` (`guides`) | FactIQ's house-style chart/report/SQL guides (`"chart"`, `"report"`, `"sql"`, or `"all"`). Optional; this skill's `references/` already cover the **publishing** JSON formats — use these guides for extra house-style detail. |
 
@@ -230,7 +226,12 @@ local visualizations**). Local-only; never calls the API.
    read `references/fiscal-policy-revenue.md` before fetching; those questions
    need aggregate receipts, tax-source composition, distributional tax detail
    where available, non-tax component detail, policy-promise context, and
-   explicit data-gap notes.
+   explicit data-gap notes. For Census Business Formation Statistics questions
+   about applications by industry/NAICS, read
+   `references/business-formation-statistics.md` before fetching; those
+   reports need ranked application facts, likely economic drivers, entry
+   barriers, concentration checks where available, microeconomic and policy
+   implications, and explicit caveats.
 
    For report-mode questions covering multiple topics, companies, or data
    sources, consider decomposing the research into parallel subagents — see
@@ -251,14 +252,7 @@ local visualizations**). Local-only; never calls the API.
    code interpreter in this loop.
 5. **Recent market data.** The DB lags for very recent market/price data — use
    `get_market_data` for current quotes, commodities, and FX.
-6. **Satellite signals.** For crop burning, air-quality-based activity,
-   crop condition (NDVI), monsoon rainfall, heatwaves, or agricultural drought — signals no
-   statistical agency publishes fast — use `get_geo_data`. Read
-   `references/satellite.md` first: it covers the five datasets, region
-   syntax, the 50-interval window budget (seasonal comparisons = one call
-   per season), cloud-cover caveats, and required attribution. Satellite
-   data complements warehouse series; prefer curated series where both exist.
-7. **Answer, publish, render, or build.** Direct-answer mode: once you have the
+6. **Answer, publish, render, or build.** Direct-answer mode: once you have the
    value, reply with a single sentence stating the number, its period, and the
    source — no ChartSpec, no `share_chart`, no terminal render. Quick-chart mode:
    build a ChartSpec object
@@ -480,6 +474,14 @@ Ground rules:
   corporate-size detail where official data exist, named non-tax components,
   a sourced policy-promise alignment note when relevant, and explicit timing
   or availability caveats.
+- **Business formation by industry gets interpretation.** Treat Census BFS
+  questions about applications by industry/NAICS as industry-analysis reports,
+  not ranked tables, unless the user explicitly asks for only a ranking.
+  Follow `references/business-formation-statistics.md`: show application facts,
+  explain likely drivers for high and low industries, discuss entry barriers,
+  regulation, capital intensity, incumbents, concentration metrics where
+  available, microeconomic and policy implications, and distinguish measured
+  findings from inferred explanations.
 
 The `share_report` tool validates the report against FactIQ's real chart
 schemas server-side, stores it as a completed public run, and returns the
@@ -609,9 +611,10 @@ payload from the transcript so you never retype the rows.
   revenue and fiscal-policy questions: aggregate tax/non-tax receipts, tax
   source composition, income-bracket and corporate-size distributional checks,
   non-tax component detail, campaign-promise alignment, and data-gap caveats.
-- `references/satellite.md` — the `get_geo_data` satellite tool: datasets and
-  their economic reading, region syntax and coverage, window budgeting,
-  cloud/quality caveats, attribution requirements, worked example.
+- `references/business-formation-statistics.md` — report pattern for Census
+  Business Formation Statistics and industry/NAICS application questions:
+  application facts, likely economic drivers, entry barriers, concentration
+  checks, microeconomic and policy implications, and BFS caveats.
 - `references/viz-guide.md` — bespoke local HTML visualizations with
   `build_viz.py`: the assemble/render loop, the `DATA` contract, technique
   selection (ECharts/D3/Canvas/WebGL), a legibility checklist, starter recipes.
