@@ -1,22 +1,21 @@
 # FactIQ Plugin
 
-Turn your coding agent into an economic-data analyst. This plugin for
+Turn your coding agent into an finance and economy analyst. This plugin for
 [Claude Code](https://code.claude.com/docs/en/plugins) and
 [Codex](https://github.com/openai/codex) gives the agent direct access to
-FactIQ's warehouse of official statistics — US, China, India, Korea, IMF,
+FactIQ's warehouse of official statistics — SEC filings, US, China, India, Korea, IMF,
 World Bank, and more — plus live market data and earnings-call intelligence.
-The agent discovers series, runs read-only SQL, computes derived metrics, and
-publishes the result as a shareable FactIQ chart or report, a terminal
-preview, or a bespoke local HTML visualization.
+The agent discovers series, runs read-only SQL on FactIQ's database, computes 
+derived metrics, and publishes the result as a shareable FactIQ chart or report, 
+a terminal preview, or a bespoke local HTML visualization.
 
-No codebase or database access is required — only a FactIQ account (currently
-free), authorized once over OAuth.
+No codebase or hosted database is required — only a free FactIQ account. You can easily combine
+FactIQ with other skills in your codebase.
 
 ## How it works
 
-There is no server-side agent and no black box. **Your coding agent is the
-analyst**: it decomposes the question, finds the data, does the math with its
-own tokens, authors the output, and publishes it — all through tool calls to
+**Your coding agent is the analyst**: it decomposes the question, finds the data, does 
+the math, authors the output, and publishes it - all through tool calls to
 the **FactIQ MCP server** (bundled in `.mcp.json`), which Claude Code and
 Codex talk to natively over a single OAuth connection.
 
@@ -37,7 +36,7 @@ Codex talk to natively over a single OAuth connection.
 └──────────────┬──────────────┘
                │
 ┌──────────────▼──────────────┐
-│  FactIQ data warehouse      │      20+ official sources, one schema
+│  FactIQ data warehouse      │      25+ official sources, one schema
 │  + factiq.com share pages   │      published charts/reports render here
 └─────────────────────────────┘
 ```
