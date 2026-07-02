@@ -216,7 +216,12 @@ local visualizations**). Local-only; never calls the API.
    read `references/fiscal-policy-revenue.md` before fetching; those questions
    need aggregate receipts, tax-source composition, distributional tax detail
    where available, non-tax component detail, policy-promise context, and
-   explicit data-gap notes.
+   explicit data-gap notes. For Census Business Formation Statistics questions
+   about applications by industry/NAICS, read
+   `references/business-formation-statistics.md` before fetching; those
+   reports need ranked application facts, likely economic drivers, entry
+   barriers, concentration checks where available, microeconomic and policy
+   implications, and explicit caveats.
 
    For report-mode questions covering multiple topics, companies, or data
    sources, consider decomposing the research into parallel subagents — see
@@ -456,6 +461,14 @@ Ground rules:
   corporate-size detail where official data exist, named non-tax components,
   a sourced policy-promise alignment note when relevant, and explicit timing
   or availability caveats.
+- **Business formation by industry gets interpretation.** Treat Census BFS
+  questions about applications by industry/NAICS as industry-analysis reports,
+  not ranked tables, unless the user explicitly asks for only a ranking.
+  Follow `references/business-formation-statistics.md`: show application facts,
+  explain likely drivers for high and low industries, discuss entry barriers,
+  regulation, capital intensity, incumbents, concentration metrics where
+  available, microeconomic and policy implications, and distinguish measured
+  findings from inferred explanations.
 
 The `share_report` tool validates the report against FactIQ's real chart
 schemas server-side, stores it as a completed public run, and returns the
@@ -585,6 +598,10 @@ payload from the transcript so you never retype the rows.
   revenue and fiscal-policy questions: aggregate tax/non-tax receipts, tax
   source composition, income-bracket and corporate-size distributional checks,
   non-tax component detail, campaign-promise alignment, and data-gap caveats.
+- `references/business-formation-statistics.md` — report pattern for Census
+  Business Formation Statistics and industry/NAICS application questions:
+  application facts, likely economic drivers, entry barriers, concentration
+  checks, microeconomic and policy implications, and BFS caveats.
 - `references/viz-guide.md` — bespoke local HTML visualizations with
   `build_viz.py`: the assemble/render loop, the `DATA` contract, technique
   selection (ECharts/D3/Canvas/WebGL), a legibility checklist, starter recipes.
