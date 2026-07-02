@@ -15,9 +15,9 @@ description: >
   state/province choropleths, coordinate bubble maps), a terminal chart preview,
   a full multi-section research report, or a bespoke custom visualization or
   dashboard saved as a local HTML file. You orchestrate the whole analysis
-  yourself — discover series, query SQL, compute, then publish a single chart or
-  a fully formed report as a share link, render a terminal chart, or build a
-  custom local HTML visualization.
+  yourself — discover series, query SQL, compute, then answer a simple lookup in
+  one sentence, publish a single chart or a fully formed report as a share link,
+  render a terminal chart, or build a custom local HTML visualization.
 allowed-tools: >
   mcp__plugin_factiq_factiq__*,
   mcp__factiq__*,
@@ -31,8 +31,9 @@ You are the analyst. FactIQ provides authenticated **MCP tools** for the whole
 loop — discover the data (catalog, dataset/series search, read-only SQL, series
 lookup, market data, earnings search), then publish the result (`share_chart`,
 `share_report`). There is no server-side agent: you decompose the question, find
-the data with the MCP tools, do the math with your own tokens, author the
-output, and publish it with a tool call.
+the data with the MCP tools, do the math with your own tokens, then either
+answer directly in a sentence or author the output and publish it with a tool
+call.
 
 Five output modes:
 
