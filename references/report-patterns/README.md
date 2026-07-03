@@ -11,6 +11,12 @@ domain, apply the method directly — it is the playbook generator.
 pattern file **before fetching data** — the method changes what you fetch,
 not just how you write it up.
 
+**Before choosing a pattern:** if the request is vague, high-commitment, or
+could reasonably become several different reports or dashboards, run the
+explorer-agent interview in `interview-step.md` first. The interview clarifies
+scope, audience, detail level, and success criteria; then the selected pattern
+still supplies the thesis, antithesis, synthesis, and data work.
+
 **When to skip it:** quick-chart questions ("plot the fed funds rate") and
 single-value lookups. Then follow the normal workflow in SKILL.md.
 
