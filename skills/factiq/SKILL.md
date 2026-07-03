@@ -60,7 +60,10 @@ Five output modes:
   questions in a covered domain (bilateral trade, economic policy, monetary
   policy, fiscal revenue, business formation — see
   `references/report-patterns/README.md`) default here unless the user
-  explicitly asks for only a quick chart.
+  explicitly asks for only a quick chart. If the request is vague or
+  comprehensive, run the explorer-agent interview in
+  `references/report-patterns/interview-step.md` before data work; it clarifies
+  scope without replacing the dialectical report method.
 - **Bespoke local viz** (`build_viz.py`) — a self-contained HTML file you
   author freely and save locally, not published to FactIQ. Use when the answer
   needs something the ChartSpec can't express: a custom layout, a multi-panel
@@ -196,6 +199,18 @@ local visualizations**). Local-only; never calls the API.
 
 ## Orchestration workflow
 
+0. **Interview before major forks.** If the request is broad, vague, or about
+   to become a high-commitment workflow — especially a detailed report,
+   multi-panel dashboard, bespoke visualization, or a report that could follow
+   multiple scopes — use an explorer-agent interview before fetching data or
+   spawning research subagents. Read
+   `references/report-patterns/interview-step.md` and ask only the few choices
+   that would materially change the work: detail level, audience, user context
+   or hypothesis, priority lens, required/excluded entities, and time window.
+   Pass the answers into all downstream research and assembler prompts as hard
+   context. Skip the interview for direct answers, narrow quick charts, or when
+   the user already gave clear scope, audience, and detail level. If the user
+   does not answer, proceed with the defaults in the interview guide.
 1. **Catalog first.** Call `get_data_catalog` once to get the compact
    per-schema index and the table DDL. It tells you what each schema covers,
    not every dataset. Skip schemas under `schemas_without_data`. (You rarely
@@ -220,7 +235,10 @@ local visualizations**). Local-only; never calls the API.
    fiscal-policy revenue, business formation) to a playbook of that domain's
    canonical antitheses with ready SQL. For domains without a playbook, apply
    the method directly. Either way it changes what you fetch, not just how
-   you write it up.
+   you write it up. The interview step does not replace this method: it sets
+   the user's preferred scope and audience first, then the report-pattern
+   method determines the thesis, antithesis, synthesis, and data work inside
+   that scope.
 
    For report-mode questions covering multiple topics, companies, or data
    sources, consider decomposing the research into parallel subagents — see
@@ -270,6 +288,22 @@ sources, decompose the work into parallel subagents. This does two things:
 each research thread gets a full, focused context instead of competing for
 attention in one serial pass, and the report-assembly step gets the spec
 loaded directly in its prompt so it never guesses at field names.
+
+Before spawning subagents for a broad or underspecified request, run the
+explorer-agent interview described in
+`references/report-patterns/interview-step.md` unless the user already gave
+clear scope, detail level, audience, and priority lens. Include the interview
+answers in every research-agent prompt and in the report-assembler prompt so
+the final artifact reflects the user's context instead of only the generic
+version of the question.
+
+### Explorer interview subagent
+
+Use an explorer agent for the interview step, not a research subagent. Its job
+is to clarify the decision, audience, scope, output shape, and success criteria
+and return a compact brief. It should not fetch data, choose final chart
+schemas, or publish anything. Research subagents run only after the brief and
+the relevant report pattern are known.
 
 **Do NOT use subagents** for quick-chart mode or single-topic questions — the
 overhead is not worth it. The decision point is right after step 2 of the
@@ -568,10 +602,13 @@ payload from the transcript so you never retype the rows.
   (ECharts/D3/Canvas/WebGL), a legibility checklist, starter recipes.
 
 **`references/report-patterns/`** — how to think about broad analytical
-questions. Start at `report-patterns/README.md`: it teaches the dialectical
-method (thesis → antithesis → synthesis) that every report follows and routes
-covered domains (bilateral trade, bilateral economic policy, monetary policy,
-fiscal-policy revenue, business formation, and any added later) to a playbook
-of that domain's canonical antitheses with ready SQL. For uncovered domains —
+questions. Start at `report-patterns/interview-step.md` when the request is
+vague or high-commitment; it defines the explorer-agent interview that
+clarifies scope and audience before data work. Then read
+`report-patterns/README.md`: it teaches the dialectical method (thesis →
+antithesis → synthesis) that every report follows and routes covered domains
+(bilateral trade, bilateral economic policy, monetary policy, fiscal-policy
+revenue, business formation, and any added later) to a playbook of that
+domain's canonical antitheses with ready SQL. For uncovered domains —
 investment analysis, general macro — the README shows how to apply the method
 directly.

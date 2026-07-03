@@ -40,6 +40,12 @@ single chart could plausibly satisfy it — use the AskUserQuestion tool to
 offer the two modes, noting that the report takes noticeably longer and uses
 more of their tokens and FactIQ tool quota.
 
+If the ambiguity is not chart-versus-report but scope, audience, decision
+criteria, or report/dashboard depth, run the explorer-agent interview in
+`references/report-patterns/interview-step.md` before data work. Use the
+resulting brief as downstream context; the selected report pattern still
+controls the thesis, antithesis, synthesis, and required data checks.
+
 Then follow the skill's orchestration workflow (catalog → discover → fetch →
 compute, all via the MCP tools) and finish per the mode:
 
