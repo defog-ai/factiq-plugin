@@ -139,6 +139,11 @@ specific question.
 
 ## Reporting rules
 
+- Qualitative sections — the policy map, negotiation agenda, third-country
+  pressure, and caveats — publish as `text` panels: a takeaway title plus a
+  few paragraphs (see the Text panels section of
+  `references/output/report-spec.md`). Never lay them out as a table whose
+  cells are sentences.
 - Do not imply that merchandise trade explains all trade policy unless the
   prompt asks only for goods.
 - Do not silently omit services, FDI, or investment from a trade-policy report.
