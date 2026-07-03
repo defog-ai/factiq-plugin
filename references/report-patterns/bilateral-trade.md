@@ -45,6 +45,10 @@ The default report shape is 3-4 sections:
    drivers unless the latest-month move is the point of the question.
 4. **Policy context and caveats.** Current trade agreement status, tariff and
    non-tariff issues, industrial/supply-chain policies, and source asymmetry.
+   Publish this section's content as a **`text` panel** (`chart_type:
+   "text"` — a title plus a few paragraphs; see the Text panels section of
+   `references/output/report-spec.md`), never as a table whose cells are
+   sentences.
 
 For trade-balance or deficit tables, choose row granularity by window and
 purpose, not by a categorical monthly or yearly default. Keep monthly charts
@@ -491,6 +495,11 @@ For India-South Korea, check current official information on:
 Keep policy inference separate from measured trade data: say "policy could
 support" or "policy could weigh on" unless the data and sources directly prove
 causality.
+
+Render the policy discussion as prose — a `text` panel with a clear takeaway
+title and a few paragraphs covering the signals, what they mean for the trade
+reading, and the caveats. Do not lay it out as an issue/signal/caveat table;
+sentence-length cells render badly and the table format adds nothing.
 
 ## Report and lineage requirements
 

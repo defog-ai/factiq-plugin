@@ -38,20 +38,22 @@ model name.
 - `summary` — required, ≤5,000 chars. Rendered as bullets, one per sentence.
 - `sections` — 1–12 (2–5 is the sweet spot). Each needs a `heading`;
   `narrative` and `charts` are optional per section, but the report as a
-  whole needs **at least one chart** and at most **16 charts total**.
+  whole needs **at least one data chart** (text panels don't count toward
+  that minimum) and at most **16 charts total**.
 - `narrative` — **plain text, no markdown**: the report page renders it
   verbatim, so `**bold**` shows literal asterisks. ≤30,000 chars.
 
 ## Charts
 
-`chart_type`: `line | bar | table | bubble | small_multiples | stacked_area
-| map | heatmap`. **Stick to `line`, `bar`, and `table`** — they take the
-simple tabular format below. The other types pass through with the in-house
-agent's full hydrated config structure, which is not documented here. For a
-geographic finding, publish the map as its own `share_chart` (fully supported
-— see `references/output/chart-spec.md`, **Maps**) and reference its share link from
-the section narrative, rather than embedding an undocumented map structure in
-the report.
+`chart_type`: `line | bar | table | text | bubble | small_multiples |
+stacked_area | map | heatmap`. **Stick to `line`, `bar`, `table`, and
+`text`** — the first three take the simple tabular format below, and `text`
+is the prose panel documented after it. The other types pass through with the
+in-house agent's full hydrated config structure, which is not documented
+here. For a geographic finding, publish the map as its own `share_chart`
+(fully supported — see `references/output/chart-spec.md`, **Maps**) and
+reference its share link from the section narrative, rather than embedding an
+undocumented map structure in the report.
 
 Tabular chart fields:
 
@@ -82,6 +84,36 @@ For longer windows, especially 5+ years, monthly rows often make tables too
 noisy; usually summarize with annual totals, YTD comparisons, latest/prior
 snapshots, or selected turning points instead. Do not default categorically to
 monthly or yearly rows.
+
+### Text panels
+
+A `text` chart is a **prose panel**: a titled block of one to a few paragraphs
+that occupies a slot in the report flow like a chart. Use it for qualitative
+content — policy context, caveats, interpretation, "what to watch" — that has
+no numbers to plot. **Never build a table whose cells are sentences**; if a
+cell wouldn't fit on one line, it isn't table data — write a text panel.
+
+| Field | Required | Notes |
+|---|---|---|
+| `chart_type` | yes | `text` |
+| `title` | yes | The takeaway, stated like a chart title |
+| `body` | yes | Plain text, ≤4,000 chars; blank lines separate paragraphs |
+| `subtitle` | no | One line of framing |
+| `sources` | recommended | Same format as chart sources |
+
+```json
+{
+  "chart_type": "text",
+  "title": "Policy easing lowers friction, but it does not explain the surge",
+  "subtitle": "What the diplomatic thaw does and does not tell us",
+  "body": "First paragraph of plain text.\n\nSecond paragraph.",
+  "sources": [{ "name": "Ministry of Commerce", "type": "web" }]
+}
+```
+
+Text panels don't satisfy the report's at-least-one-chart requirement, and
+they aren't a second narrative — keep the section `narrative` for reading the
+section's charts, and use a text panel when the prose *is* the panel.
 
 ### Sources
 
