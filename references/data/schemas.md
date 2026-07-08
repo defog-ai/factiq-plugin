@@ -16,7 +16,7 @@ file. Some schemas are admin-only and simply won't appear in your
 | `eia` | Energy Information Administration | Petroleum, natural gas, electricity, renewables — production, consumption, prices |
 | `ers` | USDA Economic Research Service | Agricultural and food economics |
 | `bts` | Bureau of Transportation Statistics | Transportation and freight |
-| `earnings` | Alpha Vantage / earnings calls | Earnings-call transcripts intelligence — searched via the `search_earnings` tool, not SQL |
+| *(not a SQL schema)* | Earnings-call transcripts, decomposed into a claim graph | Management's guidance/comparisons, Q&A pressure points, and disclosure profiles — searched via the `search_earnings` tool, never SQL (the underlying `transcripts` schema has a bespoke structure and no `series` table) |
 
 ## China
 
