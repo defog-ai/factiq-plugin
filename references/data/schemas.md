@@ -16,6 +16,7 @@ file. Some schemas are admin-only and simply won't appear in your
 | `eia` | Energy Information Administration | Petroleum, natural gas, electricity, renewables — production, consumption, prices |
 | `ers` | USDA Economic Research Service | Agricultural and food economics |
 | `bts` | Bureau of Transportation Statistics | Transportation and freight |
+| `sec` | SEC EDGAR (~50 large-cap companies) | XBRL segment/product/geography financial detail (`sec_10k`/`sec_10q`/`sec_20f`/`sec_40f`), management's forward guidance (`sec_guidance`), and company-specific operating KPIs like ARR/RevPAR/subscribers (`sec_kpi`) — call `describe_dataset` for series-ID conventions before querying |
 | *(not a SQL schema)* | Earnings-call transcripts, decomposed into a claim graph | Management's guidance/comparisons, Q&A pressure points, and disclosure profiles — searched via the `search_earnings` tool, never SQL (the underlying `transcripts` schema has a bespoke structure and no `series` table) |
 
 ## China
@@ -58,7 +59,7 @@ file. Some schemas are admin-only and simply won't appear in your
   `india_trade` + `korea_trade` cover the same flows from each country's own
   books when those reporters are in scope
 - Cross-country comparisons → `imf` / `worldbank`
-- Company-specific → `get_market_data` and `search_earnings` tools (not SQL schemas)
+- Company-specific: consolidated quotes/fundamentals → `get_market_data` tool (not SQL); segment/product/geography detail, forward guidance, or operating KPIs (ARR, RevPAR, ...) → `sec` schema via `run_sql`; what management said live on a call → `search_earnings` tool (not SQL)
 
 HS trade schemas (`us_census_hs` in census, `china_customs`, `india_trade`,
 `korea_trade`) carry the same trade at multiple HS digit levels — filter to one
