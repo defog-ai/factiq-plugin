@@ -120,10 +120,10 @@ All FactIQ tools are MCP tools provided by the `factiq` MCP server.
 | `run_sql` (`schema`, `sql`, `question?`, `explore?`, `auto_retry?`) | Read-only SELECT against one schema. The power tool for joins, pivots, aggregation. |
 | `get_series` (`schema`, `series_id`, `from_year?`, `to_year?`) | Fetch one series — timeseries, tabular, or `COMPOUND::` ids all work. |
 | `get_market_data` (`function`, `symbol?`, `interval?`, `outputsize?`) | Quotes, daily/weekly/monthly series, fundamentals (OVERVIEW, INCOME_STATEMENT, EARNINGS), FX, commodities (WTI, BRENT, GOLD), SYMBOL_SEARCH. |
-| `search_earnings` (`query`, `search_target?`, `company_filter?`, `quarter_filter?`, `limit?`) | Full-text search over earnings-call intelligence. |
+| `search_earnings` (`query`, `search_target?`, `company_filter?`, `quarter_filter?`, `limit?`) | Trigram/keyword search over earnings-call intelligence — atomic, quote-anchored rows decomposed from live calls, never a raw transcript dump. `search_target`: `"claims"` (default — management's guidance/comparisons/quantified statements, with `direction`/`value`/`unit` where checkable), `"pressure_points"` (what analysts pressed for in Q&A and whether management confirmed/declined/deflected), or `"disclosure_profile"` (ticker-only lookup of what a company routinely discloses vs. withholds — pass the ticker via `company_filter` or `query`). Narrow with `company_filter` (ticker) / `quarter_filter` (e.g. `"FY2026Q3"`). For filed XBRL financials (income statement, balance sheet, segment detail) use `run_sql` on the `sec` schema instead — this only covers what was said live on the call. |
 | `get_style_guides` (`guides`) | FactIQ's house-style chart/report/SQL guides (`"chart"`, `"report"`, `"sql"`, or `"all"`). Optional; this skill's `references/` already cover the **publishing** JSON formats — use these guides for extra house-style detail. |
 
-Every row-returning tool (`run_sql`, `get_series`) returns **at most 50 rows**.
+Every row-returning tool (`run_sql`, `get_series`, `search_earnings`) returns **at most 50 rows**.
 When a result comes back `"truncated": true` there is more data — your move is
 to **aggregate or compute in SQL** (a `GROUP BY date_trunc(...)`, a
 SUM/AVG/rank/ratio) and fetch that, or window a single series with
