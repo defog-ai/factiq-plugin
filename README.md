@@ -4,7 +4,7 @@ Turn your agent into a finance and economy analyst. This plugin for
 [Claude Code](https://code.claude.com/docs/en/plugins) and
 [Codex](https://github.com/openai/codex) gives the agent direct access to
 FactIQ's warehouse of official statistics — SEC filings, US, China, India, Korea, IMF,
-World Bank, and more — plus live market data and earnings-call intelligence.
+World Bank, and more — plus live market data and earnings-call transcripts.
 The agent discovers series, runs read-only SQL on FactIQ's database, computes 
 derived metrics, and publishes the result as a shareable FactIQ chart or report, 
 a terminal preview, or a bespoke local HTML visualization.
@@ -144,7 +144,7 @@ Codex talk to natively over a single OAuth connection.
 │  discover   search_datasets, describe_dataset, search_series,
 │             get_data_catalog
 │  fetch      run_sql (read-only), get_series, get_market_data,
-│             search_earnings
+│             search_earnings_transcripts
 │  publish    share_chart, share_report
 └──────────────┬──────────────┘
                │
@@ -175,7 +175,7 @@ recipes live in [`references/data/sql-guide.md`](references/data/sql-guide.md).
 
 | Region | Schemas |
 |---|---|
-| United States | SEC filings data, BLS (employment, CPI, JOLTS, OEWS), Census (trade incl. HS-level, retail, housing), BEA (GDP, income), EIA (energy), USDA ERS, BTS (transportation), earnings-call intelligence |
+| United States | SEC filings data, BLS (employment, CPI, JOLTS, OEWS), Census (trade incl. HS-level, retail, housing), BEA (GDP, income), EIA (energy), USDA ERS, BTS (transportation), earnings-call transcripts |
 | China | NBS macro indicators, GACC customs (HS-level trade) |
 | India | MOSPI (CPI, WPI, IIP, GDP), RBI (banking, rates, forex), DGCI&S trade (HS-level), city traffic |
 | South Korea | KCS customs (HS-level trade) |
