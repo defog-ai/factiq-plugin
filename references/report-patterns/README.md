@@ -89,6 +89,7 @@ unchanged, you did not do the method — you decorated the thesis.
 | **Monetary policy** — central-bank stance, implementation, OMO, liquidity, transmission, FX intervention | The stance as announced: rate level, path, communication | Implementation diverges from announcement (reserves, corridor, standing facilities); transmission fails (financial conditions ease under high rates); the curve prices what the bank won't promise; FX intervention unsterilized against the stance | The *effective* stance — how tight policy is where it touches the economy | `monetary-policy.md` |
 | **Fiscal policy / revenue** — tax vs non-tax receipts, revenue by bracket or firm size, promise-vs-outcome | Receipts are up/down; the policy worked/failed | Inflation did the taxing (bracket creep, nominal base growth); composition shifted — who actually paid; one-offs and timing pull-forwards; promises measured against outcomes | The structural revenue story beneath the cyclical one, and whose burden moved | `fiscal-policy-revenue.md` |
 | **Business formation** (Census BFS) — applications by industry/NAICS, implications | An application boom signals dynamism | High-propensity share says how many are paper entities; necessity entrepreneurship (layoffs minting LLCs); growth pooled in low-barrier industries; churn offsets entry | What *kind* of dynamism, and whether it can become employers and competition | `business-formation-statistics.md` |
+| **Earnings intelligence / company analysis** — "what did X say on the call", earnings notes, guidance scorecards, cross-company themes, "is the story consistent with the data" | The narrative management tells on the call, and the consensus around it | Filed actuals vs spoken claims; disclosure behavior (what they withhold or stopped mentioning); the Q&A pressure map and refused numbers; the macro series behind every macro claim | What the narrative gets right, where it flatters, and the named falsifiers to watch | `earnings-intelligence.md` |
 
 Disambiguation for country-pair questions: goods-specific wording ("goods
 trade", "exports/imports", "trade balance", "HS", "customs", "product
@@ -100,18 +101,8 @@ merchandise-goods portion only.
 ## Domains without a playbook
 
 Apply the method directly — the table above shows the shape a domain
-instantiation takes. Two frequent cases:
+instantiation takes. The frequent case:
 
-- **Investment and company analysis** (earnings intelligence, market data).
-  Thesis: the consensus narrative and what the price implies — the multiple,
-  the guidance, the story management tells on the call. Antithesis: the
-  variant perception — where the fetched data diverges from the narrative
-  (unit economics vs the growth story, segment disclosure vs the headline
-  beat, what management stopped mentioning quarter over quarter, what the
-  commodity or FX inputs did to the cost base). Synthesis: the mispricing
-  claim — what the market has wrong, what catalyst resolves it, and what
-  evidence would kill the idea. A thesis without a named kill condition is a
-  mood, not an analysis.
 - **Macro questions generally** (labor, inflation, housing, energy). Thesis:
   the headline print. Antithesis: run the six moves in the table — measure,
   compose, deflate, cross-check the counterparty, look for the reaction,

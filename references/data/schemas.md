@@ -17,7 +17,7 @@ file. Some schemas are admin-only and simply won't appear in your
 | `ers` | USDA Economic Research Service | Agricultural and food economics |
 | `bts` | Bureau of Transportation Statistics | Transportation and freight |
 | `sec` | SEC EDGAR (~950 US-listed companies with market cap ≥ $10B) | XBRL segment/product/geography financial detail (`sec_10k`/`sec_10q`/`sec_20f`/`sec_40f`), management's forward guidance (`sec_guidance`), and company-specific operating KPIs like ARR/RevPAR/subscribers (`sec_kpi`) — call `describe_dataset` for series-ID conventions before querying |
-| *(not a SQL schema)* | Earnings-call transcripts, decomposed into a claim graph | Management's guidance/comparisons, Q&A pressure points, and disclosure profiles — searched via the `search_earnings_transcripts` tool, never SQL (the underlying `transcripts` schema has a bespoke structure and no `series` table) |
+| *(not a SQL schema)* | Earnings-call transcripts, decomposed into a claim graph | Management's guidance/comparisons (`claims`), Q&A pressure points (`pressure_points`), disclosure profiles (`disclosure_profile`), and covered tickers/quarters (`coverage`) — searched via the `search_earnings_transcripts` tool (params: `query`, `search_target`, `company_filter` incl. comma-separated multi-ticker, `quarter_filter`, `claim_family`, `section`, `detail`, `limit`), never SQL (the underlying `transcripts` schema has a bespoke structure and no `series` table). See `references/report-patterns/earnings-intelligence.md` for the full workflow |
 
 ## China
 
