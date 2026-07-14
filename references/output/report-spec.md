@@ -115,6 +115,53 @@ Text panels don't satisfy the report's at-least-one-chart requirement, and
 they aren't a second narrative — keep the section `narrative` for reading the
 section's charts, and use a text panel when the prose *is* the panel.
 
+### Quote panels
+
+A `quote` chart is an **attributed-quote panel**: a titled group of 1–8
+related verbatim quotes (the home for `search_earnings_transcripts`
+`verbatim_quote` values). Quoted speech never goes in a text panel body or
+the narrative — it renders here with speaker attribution and a source line.
+Quotes must be verbatim; give the words only (no surrounding quotation
+marks — the page adds typographic quotes).
+
+| Field | Required | Notes |
+|---|---|---|
+| `chart_type` | yes | `quote` |
+| `title` | yes | The takeaway the quotes support, stated like a chart title |
+| `quotes` | yes | 1–8 items, each `{quote, speaker, speaker_role?, affiliation?, context?, source_label?}`; `quote` ≤1,000 chars, `speaker` required |
+| `subtitle` | no | One line of framing, e.g. the call being quoted |
+| `sources` | recommended | Same format as chart sources |
+
+Per-quote fields: `speaker_role` ("CEO", "cfo" — rendered uppercased),
+`affiliation` ("Micron (MU)" or the analyst's firm), `context` (a short
+kicker like "On HBM supply"), `source_label` (the citation line, e.g.
+"MU FY2026Q3 earnings call · Q&A" — compose it from `reporting_ticker`,
+`fiscal_period`, and `section`).
+
+```json
+{
+  "chart_type": "quote",
+  "title": "Micron on HBM supply and cash generation",
+  "subtitle": "MU FY2026Q3 earnings call",
+  "quotes": [
+    {
+      "quote": "The last two quarters, we've generated as much as the company's history.",
+      "speaker": "Mark Murphy",
+      "speaker_role": "cfo",
+      "affiliation": "Micron (MU)",
+      "context": "On record cash flow",
+      "source_label": "MU FY2026Q3 earnings call · Q&A"
+    }
+  ],
+  "sources": [{ "name": "FactIQ earnings-transcript intelligence", "type": "database" }]
+}
+```
+
+Attribute honestly: check the claim row's `assertion_status` and never
+present an `analyst_hypothesized` quote as management's own words — attribute
+it to the analyst. Like text panels, quote panels don't satisfy the
+at-least-one-chart requirement.
+
 ### Sources
 
 ```json
