@@ -80,28 +80,23 @@ for economic/financial data questions.
 <details>
 <summary>Authenticate from a remote or headless machine</summary>
 
-Codex receives the OAuth result on a loopback callback. Forward a fixed
-callback port over SSH so you can complete the sign-in in your local browser.
+Run the normal login command on the remote machine:
 
-1. From your local machine, connect to the remote machine with port forwarding
-   enabled (or open a second SSH connection if you are already connected):
+```bash
+codex mcp login factiq
+```
 
-   ```bash
-   ssh -L 1455:127.0.0.1:1455 user@remote-host
-   ```
+1. Copy the authorization URL printed by Codex and open it in a browser on
+   your local machine.
+2. On the FactIQ authorization page, select **I'm signing in from a remote or
+   headless machine**.
+3. Sign in and approve access as usual.
+4. Copy the one-time completion command FactIQ shows and paste it into the
+   remote terminal where Codex is waiting.
 
-2. In that remote SSH session, pin Codex's callback to the forwarded port:
-
-   ```bash
-   codex mcp login factiq -c mcp_oauth_callback_port=1455
-   ```
-
-3. Copy the authorization URL printed by Codex and open it in a browser on
-   your local machine. After sign-in, the browser's loopback callback travels
-   through the SSH tunnel and completes the login on the remote machine.
-
-Keep the SSH connection open until Codex confirms authentication. You can use
-another available port instead of `1455`, but it must match in both commands.
+Codex verifies the same OAuth state and PKCE challenge as the normal browser
+redirect, then stores the connection normally. No SSH port forwarding or
+long-lived token is required.
 </details>
 
 <details>
