@@ -1,0 +1,4 @@
+interface:
+  display_name: "FX Analysis"
+  short_description: "Add macro context to rigorous FX reports"
+  default_prompt: "Use $fx-analysis to explain an exchange-rate move with bilateral, horizon-matched macroeconomic evidence."
