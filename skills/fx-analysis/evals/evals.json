@@ -1,0 +1,88 @@
+{
+  "skill_name": "fx-analysis",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "What drove EUR/USD over the past month versus the past five years?",
+      "expected_output": "A FactIQ FX report that defines EUR as the base and USD as the quote under the selected source convention, analyzes the one-month and five-year windows with different evidence, compares both economies, and publishes a qualified synthesis rather than one deterministic cause.",
+      "files": [],
+      "assertions": [
+        "Defines the exact EUR/USD quotation direction, measured move, source convention, regime, and both analysis windows",
+        "States exact dates and segments material turning points within the five-year path rather than relying only on endpoint changes",
+        "Uses short-run market repricing, policy-expectation, matched-yield, risk, flow, or verified-intervention evidence for the one-month window",
+        "Uses relative inflation, growth, current-account, capital-flow, external-balance-sheet, fiscal, PPP, or productivity evidence as appropriate for the five-year window",
+        "Fetches concept-aligned evidence for both the euro area and United States and states the direction of each bilateral gap",
+        "Uses NEER or REER only to test broad versus bilateral strength and does not call an effective rate an independent cause",
+        "Fetches and presents at least one material contradiction that changes or qualifies the synthesis",
+        "Keeps BOP flows distinct from IIP, reserve, debt, and holdings stocks wherever those channels are used",
+        "Documents reserve-adequacy formulas and fiscal definitions when used, or names them as unavailable rather than substituting mismatched measures",
+        "Aligns or caveats units, maturity, nominal/real basis, seasonal adjustment, area membership, frequency, and observation/publication/vintage dates",
+        "Ends with data gaps, confidence, appropriately qualified horizon-specific conclusions, and observations that would confirm, weaken, or falsify them",
+        "Attributes each series to its primary producer with original identifiers where available rather than naming FRED as producer"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Is the euro's move broad strength or mainly a bilateral dollar move?",
+      "expected_output": "A request for the missing comparison period followed by a bilateral-versus-effective-rate comparison over one matched window that distinguishes EUR/USD from euro NEER/REER and tests the dollar side rather than inferring broad euro strength from one pair.",
+      "files": [],
+      "assertions": [
+        "Asks for the comparison period when it is missing, then defines the bilateral pair, quotation direction, matched window, and index conventions",
+        "Compares EUR/USD with euro NEER or REER and an appropriate dollar-side broad measure when available",
+        "Aligns index bases, frequency, area membership, observation dates, and publication vintages or clearly states each mismatch",
+        "Does not treat NEER or REER as a cause of EUR/USD and does not infer broad euro strength from one bilateral rate",
+        "Separates observed moves from computed comparisons and analytical inference",
+        "Reports contradictory evidence and states whether broad-strength evidence is supported, inconclusive, or contradicted"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Did RBI intervention drive USD/INR last quarter, and what evidence supports that claim?",
+      "expected_output": "An evidence-qualified USD/INR intervention assessment that uses published RBI purchase or sale transactions where available, separates those flows from reserve stocks, and refuses to infer intervention solely from reserve changes.",
+      "files": [],
+      "assertions": [
+        "Defines USD/INR direction, the quarter, the exchange-rate move, and India's exchange-rate regime context",
+        "Clarifies whether last quarter means a calendar or Indian fiscal quarter and states exact dates",
+        "Requires published RBI currency purchase, sale, or equivalent transaction evidence before calling the episode intervention",
+        "Treats only official transaction-flow disclosures as equivalent evidence and does not treat reserve or forward-book stock changes as transactions",
+        "Keeps intervention transactions and BOP flows separate from reserves, IIP, external debt, and securities-holdings stocks",
+        "Explains that reserve stocks can change through valuation, income, reclassification, and other balance-sheet effects",
+        "Tests a competing bilateral explanation using matched India and United States policy, yield, inflation, growth, risk, or flow evidence",
+        "Documents observation and publication dates and does not silently forward-fill quarterly fundamentals to daily FX",
+        "Classifies the intervention conclusion as supported, consistent but unproven, inconclusive, or contradicted and names evidence that would change it",
+        "Separates evidence that intervention occurred from evidence that it drove USD/INR and avoids quantifying the effect without a counterfactual",
+        "Attributes RBI, Federal Reserve, Treasury, and other official series to their primary producers rather than to an access layer"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "How do matched rate differentials, current accounts, and capital flows compare for EUR/INR?",
+      "expected_output": "A two-sided EUR/INR report that constructs matched relative measures from separately fetched euro-area and India data, distinguishes transactions from positions, and states all remaining comparability limitations.",
+      "files": [],
+      "assertions": [
+        "Defines EUR as base and INR as quote under the verified source convention and states how each differential would pressure EUR/INR",
+        "Matches policy or sovereign-yield maturity, benchmark, credit risk, and nominal/real basis or explicitly caveats the mismatch",
+        "Compares euro-area and India current accounts using aligned currency and accounting concepts or compatible GDP normalization, plus aligned periods, seasonal treatment, and vintages",
+        "Separates direct, portfolio, and other-investment transaction flows from IIP, reserves, holdings, and debt stocks",
+        "Fetches each FactIQ schema separately and performs cross-economy alignment or computation locally rather than implying a cross-schema SQL join",
+        "Preserves signs, gross/net, assets/liabilities, counterparties, and area membership",
+        "Includes conflicting evidence, gaps, a qualified synthesis, and primary-producer source attribution"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Is a currency overvalued on PPP, and what can that say about its near-term outlook?",
+      "expected_output": "A request for the missing currency pair followed by a bilateral PPP valuation assessment that documents the benchmark and calculation, treats PPP as a long-run anchor, and declines to turn the valuation gap into a near-term forecast without horizon-appropriate evidence.",
+      "files": [],
+      "assertions": [
+        "Asks for the currency pair when it is missing, then identifies the pair and quotation direction before interpreting overvaluation or undervaluation",
+        "Documents the PPP or comparative-price concept, basket, base or benchmark, formula, units, observation date, publication date, and vintage",
+        "Compares both economies with a concept-aligned primary or comparable IMF/World Bank measure",
+        "States that PPP is a long-run valuation anchor and not a short-run forecast or trading signal",
+        "Labels productivity, Balassa-Samuelson, competitiveness, and safe-haven measures as documented proxies unless a direct published measure and methodology exist",
+        "Uses near-term policy-expectation, matched-return, risk, liquidity, flow, or intervention evidence for the near-term outlook and notes unavailable evidence",
+        "Avoids a synthetic score, separates facts from inference, presents conflicting evidence, and gives a confidence-qualified conclusion with falsifiers"
+      ]
+    }
+  ]
+}

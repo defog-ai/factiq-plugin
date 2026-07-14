@@ -86,6 +86,7 @@ unchanged, you did not do the method — you decorated the thesis.
 |---|---|---|---|---|
 | **Bilateral merchandise trade** — "trend in trade between A and B", trade balance, HS/customs drivers | Flows between A and B rose/fell X% | Mirror statistics disagree; price moves masquerading as demand (value vs volume); rerouting through third countries; one HS chapter carrying the aggregate | What the relationship is actually doing — decoupling, lengthening, or repricing | `bilateral-trade.md` |
 | **Bilateral economic policy** — "compare A and B trade policy", joint economic policy, investment/supply-chain coordination | Stated policy: communiqués, announced tariffs, talks | Revealed behavior contradicts rhetoric (cooperation language beside tightening FDI screens); goods data standing in for services and investment; third-country pressure driving the pair | The actual policy equilibrium versus the stated one | `bilateral-economic-policy.md` |
+| **FX analysis** — currency drivers/fundamentals, intervention effects on a pair, competitiveness, valuation, reserve adequacy, outlook | The obvious headline driver explains the currency move | The other economy's matched measure; broad versus bilateral strength; horizon mismatch; flows contradicting positions; reserve valuation effects; long-run benchmarks misused for short-run moves | A ranked, horizon-specific balance of pressures with confidence, gaps, and falsifiers | `$fx-analysis` skill |
 | **Monetary policy** — central-bank stance, implementation, OMO, liquidity, transmission, FX intervention | The stance as announced: rate level, path, communication | Implementation diverges from announcement (reserves, corridor, standing facilities); transmission fails (financial conditions ease under high rates); the curve prices what the bank won't promise; FX intervention unsterilized against the stance | The *effective* stance — how tight policy is where it touches the economy | `monetary-policy.md` |
 | **Fiscal policy / revenue** — tax vs non-tax receipts, revenue by bracket or firm size, promise-vs-outcome | Receipts are up/down; the policy worked/failed | Inflation did the taxing (bracket creep, nominal base growth); composition shifted — who actually paid; one-offs and timing pull-forwards; promises measured against outcomes | The structural revenue story beneath the cyclical one, and whose burden moved | `fiscal-policy-revenue.md` |
 | **Business formation** (Census BFS) — applications by industry/NAICS, implications | An application boom signals dynamism | High-propensity share says how many are paper entities; necessity entrepreneurship (layoffs minting LLCs); growth pooled in low-barrier industries; churn offsets entry | What *kind* of dynamism, and whether it can become employers and competition | `business-formation-statistics.md` |
@@ -96,6 +97,16 @@ drivers") routes to `bilateral-trade.md`; broad policy wording ("trade
 policy", "economic policy", "joint policy") routes to
 `bilateral-economic-policy.md`, which pulls in `bilateral-trade.md` for the
 merchandise-goods portion only.
+
+For currency questions, route broad requests about a pair's drivers,
+fundamentals, valuation, competitiveness, reserve adequacy, intervention effect,
+or outlook to the standalone `$fx-analysis` skill. Keep a narrow quote or plot
+request in the normal direct-answer or quick-chart workflow. Route questions
+about central-bank operating frameworks, OMO, liquidity, or sterilization to
+`monetary-policy.md` when no currency outcome is being explained. If the user
+asks whether intervention operations moved a currency pair, use `$fx-analysis`
+as the primary framework and use `monetary-policy.md` only for the operations
+sub-analysis.
 
 ## Domains without a playbook
 

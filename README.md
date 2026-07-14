@@ -30,8 +30,9 @@ Run **`/reload-plugins`** after installing so Claude Code picks up the new
 skill, MCP server, and command in the current session (otherwise they only
 appear the next time you start Claude Code).
 
-This adds the skill (Claude invokes it automatically for economic/financial
-data questions), the bundled FactIQ MCP server, and the `/factiq:ask` command:
+This adds the skills (Claude invokes them automatically for their covered
+economic/financial questions), the bundled FactIQ MCP server, and the
+`/factiq:ask` command:
 
 | Command | Purpose |
 |---|---|
@@ -74,8 +75,8 @@ codex mcp login factiq
 ```
 
 Complete the browser sign-in (the same FactIQ login: email, Google, or
-passkey). Start a new Codex thread after installation; the skill auto-invokes
-for economic/financial data questions.
+passkey). Start a new Codex thread after installation; the skills auto-invoke
+for the economic/financial questions they cover.
 
 <details>
 <summary>Update an existing Codex install</summary>
@@ -99,7 +100,7 @@ Add the MCP server directly to your Codex config (`~/.codex/config.toml`):
 url = "https://api.factiq.com/mcp"
 ```
 
-Then `codex mcp login factiq`. The skill won't auto-invoke without the plugin,
+Then `codex mcp login factiq`. The skills won't auto-invoke without the plugin,
 but the MCP tools are available for manual use.
 
 For Claude Code without the plugin:
@@ -123,7 +124,7 @@ The agent finds the relevant series, runs the SQL, and replies with a
 shareable factiq.com chart link — or a terminal chart or full report,
 depending on what you ask for. You don't need the slash command: any
 economic or financial data question in a normal Claude Code or Codex
-conversation auto-invokes the skill.
+conversation auto-invokes the relevant skill.
 
 ## How it works
 
@@ -135,7 +136,7 @@ Codex talk to natively over a single OAuth connection.
 ```
 ┌─────────────────────────────┐
 │  Claude Code / Codex        │
-│  + factiq skill (SKILL.md)  │      the agent orchestrates everything
+│  + FactIQ domain skills     │      the agent orchestrates everything
 └──────────────┬──────────────┘
                │  MCP over HTTP (one OAuth connection)
 ┌──────────────▼──────────────┐
@@ -154,10 +155,10 @@ Codex talk to natively over a single OAuth connection.
 └─────────────────────────────┘
 ```
 
-The reason a single skill can query BLS unemployment, Chinese customs flows,
-RBI monetary data, and World Bank indicators with the same SQL idioms: **every
-data source in the backend is normalized into the same three core tables**,
-identical in every schema:
+The reason the core FactIQ skill can query BLS unemployment, Chinese customs
+flows, RBI monetary data, and World Bank indicators with the same SQL idioms:
+**every data source in the backend is normalized into the same three core
+tables**, identical in every schema:
 
 | Table | What it holds |
 |---|---|
@@ -188,19 +189,22 @@ returns the live, authoritative version.
 
 Where the behavior lives — the files contributors will touch:
 
-- `skills/factiq/SKILL.md` — the skill definition and single source of truth
-  for the workflow. Auto-discovered by both Claude Code and Codex from the
+- `skills/factiq/SKILL.md` — the data-discovery, computation, publishing, and
+  output workflow. Auto-discovered by both Claude Code and Codex from the
   `skills/` directory
+- `skills/fx-analysis/SKILL.md` — the standalone FX research contract for
+  bilateral, horizon-matched macroeconomic reports; its `evals/` directory
+  covers the issue's representative questions
 - `references/data/` — the data layer: SQL idioms (`sql-guide.md`) and the
   dataset schema overview (`schemas.md`)
 - `references/output/` — publishing formats: ChartSpec (`chart-spec.md`),
   report JSON (`report-spec.md`), and the bespoke-viz guide (`viz-guide.md`)
 - `references/report-patterns/` — domain playbooks (monetary policy,
   bilateral trade, bilateral economic policy, fiscal-policy revenue, business
-  formation). `report-patterns/README.md` is the single entry point SKILL.md
-  references: it teaches the dialectical method (thesis → antithesis →
-  synthesis) all reports follow and routes each domain to its playbook, so
-  adding a playbook doesn't touch SKILL.md
+  formation) plus routing to the standalone FX-analysis skill.
+  `report-patterns/README.md` teaches the dialectical method (thesis →
+  antithesis → synthesis) all reports follow and routes each domain before
+  data fetching
 - `commands/ask.md` — the `/factiq:ask` slash command (Claude Code)
 - `scripts/term_chart.py` — stdlib-only renderer that prints ANSI/ASCII
   terminal previews from FactIQ ChartSpec JSON and `share_report` report
@@ -232,7 +236,7 @@ playbook is a domain's dialectic written down in advance — the headline
 reading a question invites, the contradictions a competent skeptic would
 raise against it, and the SQL to fetch both (see the method in
 [`references/report-patterns/README.md`](references/report-patterns/README.md)).
-The existing ones live in
+The existing playbooks live in
 [`references/report-patterns/`](references/report-patterns/) and are the
 pattern to follow:
 
@@ -242,6 +246,13 @@ pattern to follow:
   country-pair trade trends, product drivers, mirror-statistics caveats
 - [`fiscal-policy-revenue.md`](references/report-patterns/fiscal-policy-revenue.md)
   — government receipts, tax composition, distributional detail
+
+When a domain needs its own trigger metadata and a reusable workflow that
+composes with the core FactIQ tooling, add a standalone skill under `skills/`.
+[`skills/fx-analysis/SKILL.md`](skills/fx-analysis/SKILL.md) is the example: it
+handles bilateral, horizon-matched currency-driver, valuation, intervention,
+reserve-adequacy, and outlook reports without duplicating the data and
+publishing workflow in `skills/factiq/SKILL.md`.
 
 A good playbook contains:
 
