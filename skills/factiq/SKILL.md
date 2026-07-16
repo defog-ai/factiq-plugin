@@ -541,6 +541,16 @@ look → fix**:
    visual. One render pass is never enough; budget two or three.
 4. Hand the user the local file path; offer `--open` to open it in a browser.
 
+If the viz will instead be published as a **claude.ai Artifact** that calls
+FactIQ live from the page (`window.claude.mcp`), read
+`references/output/viz-guide.md` (**Publishing as a claude.ai Artifact with
+live data**) first. In short: declare the capability as `factiq` (the default
+connector name) and publish without asking; when you deliver the link, tell
+the user that if the page can't find their connector they should send you its
+exact name from claude.ai Settings → Connectors so you can republish with it.
+In the page's own JS, discover the callable server at runtime with
+`listTools()` rather than hardcoding a name.
+
 ## Context budget — the 50-row cap
 
 Every row-returning MCP tool (`run_sql`, `get_series`) returns **at most 50
