@@ -14,7 +14,9 @@ fine-grained control over a chart's look.
 
 ## The three commands
 
-`scripts/build_viz.py` is local-only (it never calls the FactIQ API):
+`{plugin_root}/scripts/build_viz.py` is local-only (it never calls the FactIQ
+API). Resolve `{plugin_root}` as described in `SKILL.md`; do not use the
+caller's working directory:
 
 | Command | Purpose |
 |---|---|
@@ -44,7 +46,7 @@ stderr," not "minor warning."
 3. **Assemble** the self-contained file. Bespoke vizzes usually combine
    several series, so list every file after one `--data` flag:
    ```bash
-   python3 scripts/build_viz.py assemble \
+   python3 "{plugin_root}/scripts/build_viz.py" assemble \
      --template my_viz.html \
      --data jobs=/tmp/jobs.json gdp=/tmp/gdp.json vac=/tmp/vac.json \
      --out /tmp/out.html
@@ -55,7 +57,7 @@ stderr," not "minor warning."
    above you get `DATA.jobs`, `DATA.gdp`, and `DATA.vac`.
 4. **Render and look.** Screenshot it, then actually read the image:
    ```bash
-   python3 scripts/build_viz.py render /tmp/out.html --out /tmp/out.png
+   python3 "{plugin_root}/scripts/build_viz.py" render /tmp/out.html --out /tmp/out.png
    ```
    If exit code is 5, read the errors on stderr and fix them first — a JS
    error usually means a blank page. Then inspect the screenshot against the
@@ -129,7 +131,7 @@ Right after a fetch, save its result:
 
 ```bash
 # The most recent run_sql result → korea.json
-python3 scripts/build_viz.py save --tool run_sql --out /tmp/korea.json
+python3 "{plugin_root}/scripts/build_viz.py" save --tool run_sql --out /tmp/korea.json
 ```
 
 - `--tool run_sql` (or `get_series`, `get_market_data`) keeps only that tool's
@@ -138,8 +140,8 @@ python3 scripts/build_viz.py save --tool run_sql --out /tmp/korea.json
   name or a distinctive fragment of the SQL you just wrote — so it's
   unambiguous even when you fetched several series in one turn:
   ```bash
-  python3 scripts/build_viz.py save --match "korea_customs" --out /tmp/korea.json
-  python3 scripts/build_viz.py save --match "census" --out /tmp/census.json
+  python3 "{plugin_root}/scripts/build_viz.py" save --match "korea_customs" --out /tmp/korea.json
+  python3 "{plugin_root}/scripts/build_viz.py" save --match "census" --out /tmp/census.json
   ```
 - `--list` prints the matching results (tool, row count, input preview) with
   their indices instead of saving — use it to pick, then `--index N` to save a

@@ -1,0 +1,712 @@
+import json
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS = ROOT / "scripts"
+
+
+def run_script(name, *args):
+    return subprocess.run(
+        [sys.executable, str(SCRIPTS / name), *map(str, args)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+class SqlGeneratorTests(unittest.TestCase):
+    def test_comext_rejects_empty_reporters_without_traceback(self):
+        result = run_script(
+            "comext_sql.py",
+            "total",
+            "--reporters",
+            "",
+            "--partner",
+            "cn",
+            "--flow",
+            "imports",
+            "--start",
+            "2025-01",
+            "--end",
+            "2025-12",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("at least one EU member", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_comext_deduplicates_reporters(self):
+        result = run_script(
+            "comext_sql.py",
+            "total",
+            "--reporters",
+            "de,de",
+            "--partner",
+            "cn",
+            "--flow",
+            "imports",
+            "--start",
+            "2025-01",
+            "--end",
+            "2025-12",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.count("FROM data_points"), 1)
+        self.assertNotIn("UNION ALL", result.stdout)
+
+    def test_comext_rejects_invalid_codes_limits_and_unsafe_supplementary_sums(self):
+        common = (
+            "--reporters",
+            "de",
+            "--partner",
+            "cn",
+            "--flow",
+            "imports",
+            "--start",
+            "2025-01",
+            "--end",
+            "2025-12",
+        )
+        bad_hs = run_script("comext_sql.py", "trend", *common, "--hs", "85ab")
+        bad_top = run_script("comext_sql.py", "products", *common, "--top", "0")
+        bad_sum = run_script(
+            "comext_sql.py", "total", *common, "--metric", "supplementary"
+        )
+        exact = run_script(
+            "comext_sql.py",
+            "trend",
+            *common,
+            "--metric",
+            "supplementary",
+            "--hs",
+            "85076000",
+        )
+        self.assertNotEqual(bad_hs.returncode, 0)
+        self.assertNotEqual(bad_top.returncode, 0)
+        self.assertIn("product-specific units", bad_sum.stderr)
+        self.assertEqual(exact.returncode, 0, exact.stderr)
+        self.assertIn("_su'", exact.stdout)
+        self.assertIn("s.measurement_units AS unit", exact.stdout)
+        self.assertIn("JOIN series s ON s.series_id = dp.series_id", exact.stdout)
+        self.assertIn("GROUP BY unit, t", exact.stdout)
+
+    def test_trade_hs_level_override_aggregates_finer_lines(self):
+        result = run_script(
+            "trade_sql.py",
+            "trend",
+            "--source",
+            "korea",
+            "--partner",
+            "china",
+            "--flow",
+            "exports",
+            "--start",
+            "2025-01",
+            "--end",
+            "2025-12",
+            "--hs",
+            "854232",
+            "--level",
+            "10",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("dimension_code = '10'", result.stdout)
+        self.assertIn("dimension_code LIKE '854232%'", result.stdout)
+        self.assertNotIn("exact series:", result.stdout)
+
+    def test_trade_rejects_empty_partner_nonstandard_hs_and_bad_quantity_level(self):
+        common = (
+            "--source",
+            "korea",
+            "--flow",
+            "exports",
+            "--start",
+            "2025-01",
+            "--end",
+            "2025-12",
+        )
+        empty = run_script("trade_sql.py", "total", *common, "--partner", "")
+        group = run_script(
+            "trade_sql.py",
+            "trend",
+            *common,
+            "--partner",
+            "china",
+            "--hs",
+            "123",
+        )
+        quantity = run_script(
+            "trade_sql.py",
+            "trend",
+            *common,
+            "--partner",
+            "china",
+            "--hs",
+            "854232",
+            "--metric",
+            "quantity",
+            "--level",
+            "10",
+        )
+        self.assertIn("cannot be empty", empty.stderr)
+        self.assertIn("not a 2/4/6-digit HS group", group.stderr)
+        self.assertIn("must match the code length", quantity.stderr)
+
+    def test_generators_reject_noncanonical_months(self):
+        for script, prefix, partner in (
+            ("comext_sql.py", ("total", "--reporters", "de"), "cn"),
+            ("trade_sql.py", ("total", "--source", "census"), "china"),
+        ):
+            result = run_script(
+                script,
+                *prefix,
+                "--partner",
+                partner,
+                "--flow",
+                "imports",
+                "--start",
+                "2025-1",
+                "--end",
+                "2025-12",
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("must be YYYY-MM", result.stderr)
+
+    def test_comext_omits_domestic_reporter_and_rejects_self_only(self):
+        common = (
+            "total",
+            "--partner",
+            "de",
+            "--flow",
+            "imports",
+            "--start",
+            "2025-01",
+            "--end",
+            "2025-02",
+        )
+        mixed = run_script("comext_sql.py", *common, "--reporters", "de,fr")
+        self_only = run_script("comext_sql.py", *common, "--reporters", "de")
+        self.assertEqual(mixed.returncode, 0, mixed.stderr)
+        self.assertNotIn("eu_comext_M_de_de_", mixed.stdout)
+        self.assertIn("eu_comext_M_fr_de_", mixed.stdout)
+        self.assertIn("domestic reporter de omitted", mixed.stdout)
+        self.assertNotEqual(self_only.returncode, 0)
+        self.assertIn("no domestic trade series", self_only.stderr)
+
+    def test_comext_uses_the_trade_token_valid_for_each_month(self):
+        common = (
+            "--reporters",
+            "de",
+            "--flow",
+            "imports",
+        )
+        pre_accession = run_script(
+            "comext_sql.py",
+            "total",
+            *common,
+            "--partner",
+            "pl",
+            "--start",
+            "2003-01",
+            "--end",
+            "2003-12",
+        )
+        brexit_span = run_script(
+            "comext_sql.py",
+            "trend",
+            *common,
+            "--partner",
+            "gb",
+            "--start",
+            "2019-12",
+            "--end",
+            "2020-03",
+            "--hs",
+            "8507",
+        )
+        northern_ireland = run_script(
+            "comext_sql.py",
+            "total",
+            *common,
+            "--partner",
+            "xi",
+            "--start",
+            "2022-01",
+            "--end",
+            "2022-12",
+        )
+        whole_uk = run_script(
+            "comext_sql.py",
+            "total",
+            *common,
+            "--partner",
+            "uk",
+            "--start",
+            "2020-12",
+            "--end",
+            "2021-02",
+            "--monthly",
+        )
+        unavailable_northern_ireland = run_script(
+            "comext_sql.py",
+            "total",
+            *common,
+            "--partner",
+            "xi",
+            "--start",
+            "2020-01",
+            "--end",
+            "2020-12",
+        )
+
+        self.assertEqual(pre_accession.returncode, 0, pre_accession.stderr)
+        self.assertIn("eu_comext_M_de_pl_te_p1", pre_accession.stdout)
+        self.assertNotIn("eu_comext_M_de_pl_ti_p1", pre_accession.stdout)
+
+        self.assertEqual(brexit_span.returncode, 0, brexit_span.stderr)
+        self.assertIn("eu_comext_M_de_gb_ti_p1", brexit_span.stdout)
+        self.assertIn("eu_comext_M_de_gb_te_p1", brexit_span.stdout)
+        self.assertIn(
+            "dp.time >= DATE '2019-12-01' AND dp.time < DATE '2020-02-01'",
+            brexit_span.stdout,
+        )
+        self.assertIn(
+            "dp.time >= DATE '2020-02-01' AND dp.time < DATE '2020-04-01'",
+            brexit_span.stdout,
+        )
+
+        self.assertEqual(northern_ireland.returncode, 0, northern_ireland.stderr)
+        self.assertIn("eu_comext_M_de_xi_tl_p1", northern_ireland.stdout)
+        self.assertNotIn("eu_comext_M_de_xi_te_p1", northern_ireland.stdout)
+        self.assertNotEqual(unavailable_northern_ireland.returncode, 0)
+        self.assertEqual(whole_uk.returncode, 0, whole_uk.stderr)
+        self.assertIn("eu_comext_M_de_gb_te_p1", whole_uk.stdout)
+        self.assertIn("eu_comext_M_de_xi_tl_p1", whole_uk.stdout)
+        self.assertIn(
+            "time >= DATE '2021-01-01' AND time < DATE '2021-03-01'",
+            whole_uk.stdout,
+        )
+        self.assertIn("whole UK", whole_uk.stdout)
+        self.assertIn("begin in 2021-01", unavailable_northern_ireland.stderr)
+
+    def test_comext_clips_or_rejects_dates_before_coverage(self):
+        common = (
+            "total",
+            "--reporters",
+            "de",
+            "--partner",
+            "cn",
+            "--flow",
+            "imports",
+        )
+        spanning = run_script(
+            "comext_sql.py",
+            *common,
+            "--start",
+            "2001-12",
+            "--end",
+            "2002-02",
+        )
+        unavailable = run_script(
+            "comext_sql.py",
+            *common,
+            "--start",
+            "1990-01",
+            "--end",
+            "1999-12",
+        )
+        self.assertEqual(spanning.returncode, 0, spanning.stderr)
+        self.assertIn("time >= DATE '2002-01-01'", spanning.stdout)
+        self.assertNotIn("time >= DATE '2001-12-01'", spanning.stdout)
+        self.assertIn("earlier requested months omitted", spanning.stdout)
+        self.assertNotEqual(unavailable.returncode, 0)
+        self.assertEqual(unavailable.stdout, "")
+        self.assertIn("begin in 2002-01", unavailable.stderr)
+
+    def test_trade_combines_historical_china_partner_codes(self):
+        common = (
+            "--source",
+            "china",
+            "--flow",
+            "imports",
+            "--start",
+            "2022-01",
+            "--end",
+            "2023-12",
+        )
+        total = run_script("trade_sql.py", "total", *common, "--partner", "georgia")
+        trend = run_script(
+            "trade_sql.py",
+            "trend",
+            *common,
+            "--partner",
+            "azerbaijan",
+            "--hs",
+            "010121",
+        )
+        exact_code = run_script("trade_sql.py", "total", *common, "--partner", "337")
+        self.assertEqual(total.returncode, 0, total.stderr)
+        self.assertIn("dimension_code IN ('150', '337')", total.stdout)
+        self.assertIn("combined historical partner codes 150, 337", total.stdout)
+        self.assertEqual(trend.returncode, 0, trend.stderr)
+        self.assertIn("china_customs_M_6d_010121_152", trend.stdout)
+        self.assertIn("china_customs_M_6d_010121_339", trend.stdout)
+        self.assertIn("SUM(value)", trend.stdout)
+        self.assertEqual(exact_code.returncode, 0, exact_code.stderr)
+        self.assertIn("dimension_code = '337'", exact_code.stdout)
+        self.assertNotIn("dimension_code IN", exact_code.stdout)
+
+    def test_trade_groups_historical_codes_for_fragments_and_normalizes_aliases(self):
+        common = (
+            "total",
+            "--flow",
+            "imports",
+            "--start",
+            "2022-01",
+            "--end",
+            "2023-12",
+        )
+        fragment = run_script(
+            "trade_sql.py", *common, "--source", "china", "--partner", "azer"
+        )
+        alias = run_script(
+            "trade_sql.py", *common, "--source", "korea", "--partner", "U.S."
+        )
+        self.assertEqual(fragment.returncode, 0, fragment.stderr)
+        self.assertIn("dimension_code IN ('152', '339')", fragment.stdout)
+        self.assertEqual(alias.returncode, 0, alias.stderr)
+        self.assertIn("dimension_code = 'US'", alias.stdout)
+
+
+class HsCodeTests(unittest.TestCase):
+    def test_lookup_requires_numeric_code(self):
+        result = run_script("hs_codes.py", "abcdef")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("2-, 4-, or 6-digit HS code", result.stderr)
+
+    def test_search_validates_limit_and_whitespace(self):
+        blank = run_script("hs_codes.py", "--search", "   ")
+        punctuation = run_script("hs_codes.py", "--search", ";;;")
+        limit = run_script("hs_codes.py", "--search", "battery", "--limit", "0")
+        excessive_limit = run_script(
+            "hs_codes.py", "--search", "battery", "--limit", "101"
+        )
+        self.assertIn("must contain", blank.stderr)
+        self.assertIn("must contain", punctuation.stderr)
+        self.assertNotEqual(limit.returncode, 0)
+        self.assertNotEqual(excessive_limit.returncode, 0)
+        self.assertIn("from 1 to 100", excessive_limit.stderr)
+
+    def test_everyday_search_still_finds_lithium_ion_batteries(self):
+        result = run_script(
+            "hs_codes.py", "--search", "lithium ion battery", "--limit", "3"
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("850760", result.stdout)
+
+    def test_singular_search_is_not_hidden_by_literal_side_matches(self):
+        result = run_script("hs_codes.py", "--search", "battery", "--limit", "1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(result.stdout.startswith("8506\t(HS4)"), result.stdout)
+
+    def test_code_lookup_does_not_emit_partial_results(self):
+        result = run_script("hs_codes.py", "85", "not-a-code")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_search_only_options_are_rejected_for_code_lookup(self):
+        limit = run_script("hs_codes.py", "85", "--limit", "2")
+        mixed = run_script("hs_codes.py", "85", "--search", "battery")
+        self.assertNotEqual(limit.returncode, 0)
+        self.assertIn("can only be used with --search", limit.stderr)
+        self.assertNotEqual(mixed.returncode, 0)
+        self.assertIn("either HS codes or --search", mixed.stderr)
+
+
+class SeriesMathTests(unittest.TestCase):
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tempdir.cleanup)
+        self.directory = Path(self.tempdir.name)
+
+    def payload(self, name, columns, rows):
+        path = self.directory / name
+        path.write_text(
+            json.dumps({"columns": columns, "results": rows}), encoding="utf-8"
+        )
+        return path
+
+    def test_missing_group_and_duplicate_periods_are_clear_errors(self):
+        path = self.payload(
+            "rows.json",
+            ["month", "reporter", "value"],
+            [["2025-01-01", "de", 1], ["2025-01-15", "de", 2]],
+        )
+        missing = run_script(
+            "series_math.py", "yoy", "--file", path, "--group-col", "country"
+        )
+        duplicate = run_script(
+            "series_math.py", "yoy", "--file", path, "--group-col", "reporter"
+        )
+        self.assertIn("not in columns", missing.stderr)
+        self.assertIn("duplicate period", duplicate.stderr)
+        self.assertNotIn("Traceback", missing.stderr + duplicate.stderr)
+
+    def test_payload_shape_and_nonfinite_values_are_rejected(self):
+        short = self.payload("short.json", ["month", "value"], [["2025-01-01"]])
+        nan_path = self.directory / "nan.json"
+        nan_path.write_text('{"columns":["month","value"],"results":[["2025-01",NaN]]}')
+        short_result = run_script("series_math.py", "yoy", "--file", short)
+        nan_result = run_script("series_math.py", "yoy", "--file", nan_path)
+        self.assertIn("1 values for 2 columns", short_result.stderr)
+        self.assertIn("invalid numeric constant", nan_result.stderr)
+
+    def test_malformed_timestamp_is_rejected(self):
+        path = self.payload(
+            "timestamp.json", ["month", "value"], [["2025-01-01Tnot-a-time", 1]]
+        )
+        result = run_script("series_math.py", "yoy", "--file", path)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("invalid ISO timestamp", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_yoy_preserves_large_decimal_values_and_accepts_annual_periods(self):
+        path = self.payload(
+            "annual.json",
+            ["year", "value"],
+            [
+                ["2024", "12345678901234567890.123"],
+                ["2025", "24691357802469135780.246"],
+            ],
+        )
+        result = run_script("series_math.py", "yoy", "--file", path)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("12345678901234567890.123", result.stdout)
+        self.assertIn("2025\t24691357802469135780.246\t100", result.stdout)
+
+    def test_ytd_leaves_growth_blank_when_period_coverage_differs(self):
+        path = self.payload(
+            "gaps.json",
+            ["month", "value"],
+            [["2024-01", 10], ["2024-02", 20], ["2025-02", 40]],
+        )
+        result = run_script("series_math.py", "ytd", "--file", path)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("2025-02\t40\t\n", result.stdout)
+
+    def test_share_matches_same_month_with_different_date_labels(self):
+        path = self.payload(
+            "share.json",
+            ["date", "reporter", "value"],
+            [["2025-01-01", "de", 25], ["2025-01-15", "fr", 75]],
+        )
+        result = run_script(
+            "series_math.py",
+            "share",
+            "--file",
+            path,
+            "--group-col",
+            "reporter",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("de\t2025-01-01\t25\t25", result.stdout)
+        self.assertIn("fr\t2025-01-15\t75\t75", result.stdout)
+
+    def test_merge_scales_only_the_value_column(self):
+        path = self.payload(
+            "merge.json", ["month", "code", "value"], [["2025-01", 85, "100"]]
+        )
+        result = run_script(
+            "series_math.py",
+            "merge",
+            "--input",
+            f"korea={path}:0.001",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("korea\t2025-01\t85\t0.1", result.stdout)
+
+    def test_merge_rejects_duplicate_labels(self):
+        path = self.payload("merge.json", ["month", "value"], [["2025-01", 1]])
+        result = run_script(
+            "series_math.py",
+            "merge",
+            "--input",
+            f"same={path}",
+            "--input",
+            f"same={path}",
+        )
+        self.assertIn("duplicate --input label", result.stderr)
+
+    def test_merge_rejects_nonpositive_scale_factors(self):
+        path = self.payload("merge.json", ["month", "value"], [["2025-01", 100]])
+        for factor in ("0", "-0.001"):
+            with self.subTest(factor=factor):
+                result = run_script(
+                    "series_math.py", "merge", "--input", f"scaled={path}:{factor}"
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, "")
+                self.assertIn("greater than zero", result.stderr)
+
+    def test_merge_validates_unscaled_siblings_when_any_input_is_scaled(self):
+        bad = self.payload(
+            "bad.json", ["month", "value"], [["2025-01", "not-a-number"]]
+        )
+        good = self.payload("good.json", ["month", "value"], [["2025-01", 100]])
+        result = run_script(
+            "series_math.py",
+            "merge",
+            "--input",
+            f"bad={bad}",
+            "--input",
+            f"good={good}:0.001",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("non-numeric value", result.stderr)
+
+    def test_merge_parses_factor_for_extensionless_file(self):
+        path = self.payload("payload", ["month", "value"], [["2025-01", "100"]])
+        result = run_script("series_math.py", "merge", "--input", f"korea={path}:0.001")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("korea\t2025-01\t0.1", result.stdout)
+
+    def test_merge_preserves_existing_colon_path_and_rejects_source_collision(self):
+        colon_path = self.payload("payload:2", ["month", "value"], [["2025-01", "100"]])
+        colon_result = run_script(
+            "series_math.py", "merge", "--input", f"actual={colon_path}"
+        )
+        collision_path = self.payload(
+            "collision.json",
+            ["source", "month", "value"],
+            [["old", "2025-01", 1]],
+        )
+        collision_result = run_script(
+            "series_math.py", "merge", "--input", f"new={collision_path}"
+        )
+        self.assertEqual(colon_result.returncode, 0, colon_result.stderr)
+        self.assertIn("actual\t2025-01\t100", colon_result.stdout)
+        self.assertIn("already has a 'source' column", collision_result.stderr)
+
+    def test_time_and_group_columns_must_differ(self):
+        path = self.payload("same-column.json", ["month", "value"], [["2025-01", 1]])
+        result = run_script(
+            "series_math.py",
+            "yoy",
+            "--file",
+            path,
+            "--group-col",
+            "month",
+            "--value-col",
+            "value",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("must identify different columns", result.stderr)
+
+    def test_mixed_type_group_labels_cannot_collapse_into_one_series(self):
+        path = self.payload(
+            "mixed-groups.json",
+            ["month", "reporter", "value"],
+            [["2024-01", 1, 10], ["2025-01", "1", 20]],
+        )
+        result = run_script(
+            "series_math.py", "yoy", "--file", path, "--group-col", "reporter"
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("different JSON types", result.stderr)
+
+    def test_arithmetic_commands_reject_empty_payload(self):
+        path = self.payload("empty.json", ["month", "reporter", "value"], [])
+        commands = (
+            ("yoy",),
+            ("ytd",),
+            ("share", "--group-col", "reporter"),
+            ("index", "--base", "2025-01"),
+        )
+        for command in commands:
+            with self.subTest(command=command[0]):
+                result = run_script(
+                    "series_math.py",
+                    *command,
+                    "--file",
+                    path,
+                    "--value-col",
+                    "value",
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("payload with no rows", result.stderr)
+                self.assertEqual(result.stdout, "")
+
+    def test_ytd_preserves_large_decimal_sums(self):
+        path = self.payload(
+            "large-ytd.json",
+            ["month", "value"],
+            [
+                ["2025-01", "123456789012345678901234567890.1"],
+                ["2025-02", "0.2"],
+            ],
+        )
+        result = run_script("series_math.py", "ytd", "--file", path)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("2025-02\t123456789012345678901234567890.3\t", result.stdout)
+
+    def test_extreme_decimal_range_fails_without_traceback(self):
+        path = self.payload(
+            "extreme.json",
+            ["year", "value"],
+            [["2024", "1e-6000"], ["2025", "1e6000"]],
+        )
+        result = run_script("series_math.py", "yoy", "--file", path)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("numeric range is too wide", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_single_extreme_decimal_and_scaled_result_fail_without_expanding(self):
+        path = self.payload(
+            "single-extreme.json", ["year", "value"], [["2025", "1e999999"]]
+        )
+        value_result = run_script("series_math.py", "yoy", "--file", path)
+        merge_path = self.payload(
+            "merge-extreme.json", ["month", "value"], [["2025-01", "1e9000"]]
+        )
+        merge_result = run_script(
+            "series_math.py", "merge", "--input", f"large={merge_path}:1e9000"
+        )
+        unscaled_path = self.directory / "unscaled-extreme.json"
+        unscaled_path.write_text(
+            '{"columns":["month","value"],"results":[["2025-01",1e999999]]}',
+            encoding="utf-8",
+        )
+        unscaled_result = run_script(
+            "series_math.py", "merge", "--input", f"large={unscaled_path}"
+        )
+        self.assertNotEqual(value_result.returncode, 0)
+        self.assertIn("too large for safe fixed-point output", value_result.stderr)
+        self.assertEqual(value_result.stdout, "")
+        self.assertNotEqual(merge_result.returncode, 0)
+        self.assertIn("scaled value", merge_result.stderr)
+        self.assertEqual(merge_result.stdout, "")
+        self.assertNotEqual(unscaled_result.returncode, 0)
+        self.assertIn("too large for safe fixed-point output", unscaled_result.stderr)
+        self.assertEqual(unscaled_result.stdout, "")
+
+    def test_merge_does_not_round_large_scaled_values(self):
+        path = self.payload(
+            "large-merge.json",
+            ["month", "value"],
+            [["2025-01", "123456789012345678901234567890.1"]],
+        )
+        result = run_script("series_math.py", "merge", "--input", f"large={path}:0.1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("12345678901234567890123456789.01", result.stdout)
+
+
+if __name__ == "__main__":
+    unittest.main()
