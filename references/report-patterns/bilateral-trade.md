@@ -64,10 +64,14 @@ table stays readable.
    `schemas_without_data`.
 2. Use `search_datasets` for both country names plus `trade`, `customs`, and
    `HS`; then `describe_dataset` for each candidate trade dataset.
-3. Query each reporter schema separately. `run_sql` operates inside one schema,
-   so do not try to join India and Korea, China and US, etc. in one SQL call.
-   Fetch comparable aggregates from each reporter, then normalize units and
-   compare locally.
+3. Query each reporter schema separately by default. The `schema` argument
+   only sets the default search path; qualified cross-schema references (for
+   example `korea_trade.series` from an `india_trade` call) do execute, so a
+   `UNION ALL` of per-reporter aggregations in one call is allowed when every
+   branch converts to a common unit. The reason to keep reporters separate is
+   the data, not the tool: mirror sources differ on units, valuation, timing,
+   and definitions, so never mix raw values from two reporters in a single
+   expression. Fetch comparable aggregates, normalize units, then compare.
 4. For most trade schemas, use `dimensions` to filter partner, flow, commodity,
    and HS level. Eurostat Comext is the exception: never scan its `dimensions`
    table by value. Follow the dedicated Comext workflow in
