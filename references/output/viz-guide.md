@@ -79,22 +79,19 @@ When the session can publish claude.ai Artifacts, a bespoke viz can go one
 step further than a static local file: the published page can call FactIQ's
 MCP tools itself via `window.claude.mcp`, with the viewer's own credentials,
 so the page refreshes from the warehouse instead of freezing at build time.
-Four rules make this work:
+Three rules make this work:
 
-- **Declare the capability with the viewer's connector display name — ask them
-  for it.** The artifact's capability manifest
-  (`{mcp: {servers: [{server: "<name>", tools: ["run_sql"]}]}}`) is matched
-  against the name the viewer gave the FactIQ connector when they added it in
-  claude.ai **Settings → Connectors**. That name is free text and varies per
-  user — `FactIQ`, `factiq`, or anything else. Before publishing, ask the user
-  to read the exact name out of Settings → Connectors and put that in the
-  manifest. A wrong name makes the published page prompt the viewer to add a
-  connector that "can't be found."
-- **Never use the plugin's local server name in the manifest.** Inside a
-  coding-agent session this plugin registers its MCP server locally as
-  `factiq` (tools appear as `mcp__plugin_factiq_factiq__*`). That local
-  registration is not a claude.ai connector — `plugin_factiq_factiq` or a
-  guessed variant in the manifest resolves for no viewer.
+- **Declare the capability as `factiq` and publish — don't ask first.** Use
+  `{mcp: {servers: [{server: "factiq", tools: ["run_sql"]}]}}`. The manifest
+  is matched against the display name of the viewer's FactIQ connector in
+  claude.ai **Settings → Connectors**, and `factiq` is the default name.
+  When you deliver the link, add one line: *if the page asks you to add a
+  connector it "can't find", tell me the exact name your FactIQ connector has
+  in claude.ai Settings → Connectors and I'll republish with it.* (The name
+  is free text, so a viewer may have called it something else; republishing
+  with their name at the same URL is the whole fix. Never guess variants like
+  `plugin_factiq_factiq` — that's the plugin's local tool prefix, not a
+  claude.ai connector.)
 - **Don't hardcode the name in the page's JS.** At runtime call
   `window.claude.mcp.listTools()` and use whichever granted server exposes the
   tool you need (e.g. `run_sql`); pass that to `callTool`. The page then works

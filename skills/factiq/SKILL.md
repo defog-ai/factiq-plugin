@@ -544,12 +544,12 @@ look → fix**:
 If the viz will instead be published as a **claude.ai Artifact** that calls
 FactIQ live from the page (`window.claude.mcp`), read
 `references/output/viz-guide.md` (**Publishing as a claude.ai Artifact with
-live data**) first. The critical rule: the artifact's capability manifest must
-name the viewer's FactIQ connector **exactly as it appears in their claude.ai
-Settings → Connectors** — that name is user-chosen and varies, so ask the user
-for it; never put the plugin's local server name (`factiq` /
-`plugin_factiq_factiq`) in the manifest, and have the page discover the
-callable server at runtime with `listTools()` rather than hardcoding it.
+live data**) first. In short: declare the capability as `factiq` (the default
+connector name) and publish without asking; when you deliver the link, tell
+the user that if the page can't find their connector they should send you its
+exact name from claude.ai Settings → Connectors so you can republish with it.
+In the page's own JS, discover the callable server at runtime with
+`listTools()` rather than hardcoding a name.
 
 ## Context budget — the 50-row cap
 
