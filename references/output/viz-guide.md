@@ -73,6 +73,46 @@ stderr," not "minor warning."
    `open /tmp/out.html`) to open it in their browser. The file is portable and
    needs only internet for its CDN libraries.
 
+## Publishing as a claude.ai Artifact with live data
+
+When the session can publish claude.ai Artifacts, a bespoke viz can go one
+step further than a static local file: the published page can call FactIQ's
+MCP tools itself via `window.claude.mcp`, with the viewer's own credentials,
+so the page refreshes from the warehouse instead of freezing at build time.
+Four rules make this work:
+
+- **Declare the capability with the viewer's connector display name — ask them
+  for it.** The artifact's capability manifest
+  (`{mcp: {servers: [{server: "<name>", tools: ["run_sql"]}]}}`) is matched
+  against the name the viewer gave the FactIQ connector when they added it in
+  claude.ai **Settings → Connectors**. That name is free text and varies per
+  user — `FactIQ`, `factiq`, or anything else. Before publishing, ask the user
+  to read the exact name out of Settings → Connectors and put that in the
+  manifest. A wrong name makes the published page prompt the viewer to add a
+  connector that "can't be found."
+- **Never use the plugin's local server name in the manifest.** Inside a
+  coding-agent session this plugin registers its MCP server locally as
+  `factiq` (tools appear as `mcp__plugin_factiq_factiq__*`). That local
+  registration is not a claude.ai connector — `plugin_factiq_factiq` or a
+  guessed variant in the manifest resolves for no viewer.
+- **Don't hardcode the name in the page's JS.** At runtime call
+  `window.claude.mcp.listTools()` and use whichever granted server exposes the
+  tool you need (e.g. `run_sql`); pass that to `callTool`. The page then works
+  regardless of what the viewer named their connector — only the manifest
+  needs the exact name.
+- **Scope minimally and degrade gracefully.** Declare only the tools the page
+  actually calls (usually just `run_sql`). Bake a static snapshot of the data
+  into the page so it renders instantly and stays useful without the
+  capability, and branch error copy on the error `code` (`needs_reauth` →
+  "reconnect the connector", `server_not_connected` → "add the connector"),
+  keeping the baked data visible.
+
+Two build differences from the local flow: artifacts enforce a strict CSP that
+blocks all external hosts, so the CDN `<script>` tags the local shell relies on
+(ECharts, D3) won't load — author artifact-bound pages with inline JS and
+hand-rolled SVG/Canvas instead. And live queries face the same 50-row cap as
+every `run_sql` call, so aggregate in SQL exactly as you would in-session.
+
 ## Saving data without retyping
 
 `build_viz` reads its data from files, but the MCP tools return their payload
