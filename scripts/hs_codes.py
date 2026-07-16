@@ -37,9 +37,9 @@ def positive_int(text: str) -> int:
     try:
         value = int(text)
     except ValueError:
-        raise argparse.ArgumentTypeError("must be a positive integer") from None
-    if value < 1:
-        raise argparse.ArgumentTypeError("must be at least 1")
+        raise argparse.ArgumentTypeError("must be an integer from 1 to 100") from None
+    if not 1 <= value <= 100:
+        raise argparse.ArgumentTypeError("must be from 1 to 100")
     return value
 
 
@@ -168,7 +168,7 @@ def main() -> None:
     parser.add_argument(
         "--limit",
         type=positive_int,
-        help="maximum search rows, at least 1 (default 15)",
+        help="maximum search rows, 1-100 (default 15)",
     )
     args = parser.parse_args()
 

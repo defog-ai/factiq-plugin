@@ -188,12 +188,20 @@ Use these rules:
   first and last observed dates.
 - Build exact series IDs and join them to `data_points`, whose `series_id`
   index makes the fetch fast. The detailed ID shape is
-  `eu_comext_{M|X}_{reporter}_{partner}_{te|ti}_p1_cn8_{product_code}_{eur|kg|su}`.
+  `eu_comext_{M|X}_{reporter}_{partner}_{te|ti|tl}_p1_cn8_{product_code}_{eur|kg|su}`.
   `M` means imports and `X` exports. Reporter and partner are lowercase ISO2
-  codes. The stored trade token is `te` when the partner is outside the EU
-  and `ti` when the partner is another EU member (intra-EU trade).
+  codes, except that `xi` is Eurostat's code for Northern Ireland. The stored
+  trade token follows the partner's status in each month: `te` outside the EU,
+  `ti` inside the EU, and `tl` for Northern Ireland from 2021. A range that
+  crosses an EU accession or Great Britain's February 2020 exit must query both
+  exact series with non-overlapping date bounds. Use `comext_sql.py` so these
+  changes are handled automatically. Its `uk` input combines `gb` with the
+  separately stored `xi` series from 2021; `gb` alone excludes Northern Ireland
+  from that point.
 - Use `_eur` for trade value, `_kg` for weight, and `_su` for supplementary
-  quantity. Never sum these metrics together.
+  quantity. Never sum these metrics together. Supplementary units are
+  product-specific, so return `series.measurement_units` with an exact CN8
+  supplementary trend and group by that unit before summing reporters.
 - For all-goods totals, use the exact `cn6_total` series instead of summing
   every CN8 product.
 - For several reporters, either run one already-aggregated query per reporter

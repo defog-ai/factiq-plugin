@@ -209,6 +209,8 @@ def emit(header: list[str], rows: list[list]) -> None:
 
 def split_rows(args, columns, rows):
     """Return ({group: [(year, period, label, value)]}, frequency)."""
+    if not rows:
+        fail(f"cannot run {args.command} on a payload with no rows")
     t_idx = pick_col(columns, args.time_col, TIME_HINTS, "time")
     if args.group_col and args.group_col not in columns:
         fail(f"--group-col '{args.group_col}' not in columns {columns}")
@@ -354,8 +356,6 @@ def cmd_index(args) -> None:
     by, bm, base_frequency = parse_period(args.base)
     columns, rows = load_table(args.file)
     groups, frequency = split_rows(args, columns, rows)
-    if not groups:
-        fail("cannot build an index from a payload with no rows")
     if frequency is not None and frequency != base_frequency:
         fail(
             f"base period {args.base} is {base_frequency}, but the payload is {frequency}"

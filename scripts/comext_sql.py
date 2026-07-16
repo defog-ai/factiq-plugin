@@ -9,9 +9,12 @@ the 27 reporter schemas. Run the output with the run_sql tool using the
 schema printed in the header comment.
 
 ID grammar it encodes:
-  eu_comext_{M|X}_{reporter}_{partner}_{te|ti}_p1_cn8_{code}_{eur|kg|su}
-  - reporter/partner: lowercase ISO2. Trade token: `ti` when the partner is
-    an EU member (intra-EU), else `te` (extra-EU). Chosen automatically.
+  eu_comext_{M|X}_{reporter}_{partner}_{te|ti|tl}_p1_cn8_{code}_{eur|kg|su}
+  - reporter/partner: lowercase ISO2 (plus Eurostat's `xi` code for Northern
+    Ireland); `uk` is an input alias that combines `gb` and `xi` from 2021.
+    Trade token: `ti` while the partner is an EU member, `te` while it is
+    outside the EU, and `tl` for Northern Ireland from 2021. Date ranges that
+    cross an accession or Brexit are split across the exact series.
   - metric: _eur value, _kg weight, _su supplementary quantity — never summed
     together. All-goods totals use the exact `cn6_total` product token.
 
@@ -64,6 +67,26 @@ EU_MEMBERS = [
     "es",
     "se",
 ]
+
+# Comext records trade under the partner's EU status in each month. The data
+# starts in 2002, so only accessions within its coverage need a split here.
+EU_ACCESSION_MONTH = {
+    "cy": "2004-05-01",
+    "cz": "2004-05-01",
+    "ee": "2004-05-01",
+    "hu": "2004-05-01",
+    "lv": "2004-05-01",
+    "lt": "2004-05-01",
+    "mt": "2004-05-01",
+    "pl": "2004-05-01",
+    "sk": "2004-05-01",
+    "si": "2004-05-01",
+    "bg": "2007-01-01",
+    "ro": "2007-01-01",
+    "hr": "2013-07-01",
+}
+GB_EXTRA_EU_MONTH = "2020-02-01"
+NORTHERN_IRELAND_START = "2021-01-01"
 
 METRICS = {"value": "eur", "weight": "kg", "supplementary": "su"}
 METRIC_UNITS = {"value": "EUR", "weight": "kg", "supplementary": "supplementary units"}
@@ -150,20 +173,88 @@ def limited_positive_int(text: str) -> int:
     return value
 
 
-def trade_token(partner: str) -> str:
-    return "ti" if partner in EU_MEMBERS else "te"
-
-
 def flow_code(flow: str) -> str:
     return {"imports": "M", "exports": "X", "m": "M", "x": "X"}[flow.lower()]
 
 
-def total_series_id(flow: str, reporter: str, partner: str, suffix: str) -> str:
-    return f"eu_comext_{flow}_{reporter}_{partner}_{trade_token(partner)}_p1_cn6_total_{suffix}"
+def trade_periods(
+    partner: str, lo: str, hi: str
+) -> tuple[list[tuple[str, str, str, str]], str]:
+    """Return exact (partner, trade token, lower date, upper date) segments."""
+    if partner == "uk":
+        periods, gb_note = trade_periods("gb", lo, hi)
+        notes = [
+            note
+            for note in gb_note.split("; ")
+            if note and not note.startswith("Northern Ireland is stored separately")
+        ]
+        if hi > NORTHERN_IRELAND_START:
+            periods.append(
+                ("xi", "tl", max(lo, NORTHERN_IRELAND_START), hi)
+            )
+            notes.append(
+                "whole UK combines the gb and Northern Ireland xi series from 2021-01"
+            )
+        return periods, "; ".join(notes)
+
+    if partner == "xi":
+        if hi <= NORTHERN_IRELAND_START:
+            fail("Comext's Northern Ireland (xi) series begin in 2021-01")
+        clipped_lo = max(lo, NORTHERN_IRELAND_START)
+        note = (
+            "Northern Ireland series begin in 2021-01; earlier requested months omitted"
+            if lo < NORTHERN_IRELAND_START
+            else ""
+        )
+        return [(partner, "tl", clipped_lo, hi)], note
+
+    if partner == "gb":
+        periods = []
+        if lo < GB_EXTRA_EU_MONTH:
+            periods.append((partner, "ti", lo, min(hi, GB_EXTRA_EU_MONTH)))
+        if hi > GB_EXTRA_EU_MONTH:
+            periods.append((partner, "te", max(lo, GB_EXTRA_EU_MONTH), hi))
+        periods = [period for period in periods if period[2] < period[3]]
+        notes = []
+        if len(periods) > 1:
+            notes.append(
+                "Great Britain trade switches from the intra-EU series to the "
+                "extra-EU series in 2020-02"
+            )
+        if hi > NORTHERN_IRELAND_START:
+            notes.append("Northern Ireland is stored separately as partner xi from 2021-01")
+        return periods, "; ".join(notes)
+
+    accession = EU_ACCESSION_MONTH.get(partner)
+    if accession is not None:
+        periods = []
+        if lo < accession:
+            periods.append((partner, "te", lo, min(hi, accession)))
+        if hi > accession:
+            periods.append((partner, "ti", max(lo, accession), hi))
+        periods = [period for period in periods if period[2] < period[3]]
+        note = (
+            f"partner {partner} switches from the extra-EU series to the intra-EU "
+            f"series in {accession[:7]}"
+            if len(periods) > 1
+            else ""
+        )
+        return periods, note
+
+    token = "ti" if partner in EU_MEMBERS else "te"
+    return [(partner, token, lo, hi)], ""
 
 
-def product_id_expr(flow: str, reporter: str, partner: str, suffix: str) -> str:
-    prefix = f"eu_comext_{flow}_{reporter}_{partner}_{trade_token(partner)}_p1_cn8_"
+def total_series_id(
+    flow: str, reporter: str, partner: str, token: str, suffix: str
+) -> str:
+    return f"eu_comext_{flow}_{reporter}_{partner}_{token}_p1_cn6_total_{suffix}"
+
+
+def product_id_expr(
+    flow: str, reporter: str, partner: str, token: str, suffix: str
+) -> str:
+    prefix = f"eu_comext_{flow}_{reporter}_{partner}_{token}_p1_cn8_"
     return f"'{prefix}' || lower(p.product_code) || '_{suffix}'"
 
 
@@ -190,19 +281,22 @@ def sql_total(args: argparse.Namespace) -> str:
         )
     suffix = METRICS[args.metric]
     lo, hi = date_bounds(args.start, args.end)
+    periods, period_note = trade_periods(partner, lo, hi)
 
     # Each reporter schema holds only its own series in data_points, so every
     # reporter needs its own qualified branch — a flat IN list against one
     # schema's table would silently drop the other 26.
     branches = []
     for r in reporters:
-        table = "data_points" if len(reporters) == 1 else f"eu_comext_{r}.data_points"
-        branches.append(
-            f"  SELECT '{r}' AS reporter, time AS t, value AS v\n"
-            f"  FROM {table}\n"
-            f"  WHERE series_id = '{total_series_id(flow, r, partner, suffix)}'\n"
-            f"    AND time >= DATE '{lo}' AND time < DATE '{hi}'"
-        )
+        for period_partner, token, period_lo, period_hi in periods:
+            table = "data_points" if len(reporters) == 1 else f"eu_comext_{r}.data_points"
+            branches.append(
+                f"  SELECT '{r}' AS reporter, time AS t, value AS v\n"
+                f"  FROM {table}\n"
+                f"  WHERE series_id = "
+                f"'{total_series_id(flow, r, period_partner, token, suffix)}'\n"
+                f"    AND time >= DATE '{period_lo}' AND time < DATE '{period_hi}'"
+            )
     union = "\nUNION ALL\n".join(branches)
     if args.monthly:
         select, group = (
@@ -215,35 +309,44 @@ def sql_total(args: argparse.Namespace) -> str:
             "GROUP BY reporter\nORDER BY 2 DESC",
         )
     body = f"SELECT {select}\nFROM (\n{union}\n) u\n{group};"
-    note = add_note(
-        f"all-goods total via the exact cn6_total series; values in {METRIC_UNITS[args.metric]}",
-        domestic_note,
-    )
+    note = f"all-goods total via the exact cn6_total series; values in {METRIC_UNITS[args.metric]}"
+    note = add_note(note, domestic_note)
+    note = add_note(note, period_note)
     return header(reporters, args, note) + "\n" + body
 
 
 def product_branches(
     reporters: list[str],
-    partner: str,
     flow: str,
     suffix: str,
-    lo: str,
-    hi: str,
+    periods: list[tuple[str, str, str, str]],
     inner_select: str,
     where_extra: str,
+    include_unit: bool = False,
 ) -> str:
     branches = []
     for r in reporters:
-        table = "data_points" if len(reporters) == 1 else f"eu_comext_{r}.data_points"
-        branches.append(
-            f"  SELECT {inner_select.format(reporter=r)}\n"
-            f"  FROM eu_comext_lookup.product_codes p\n"
-            f"  JOIN {table} dp\n"
-            f"    ON dp.series_id = {product_id_expr(flow, r, partner, suffix)}\n"
-            f"  WHERE p.is_numeric_cn8\n"
-            f"    AND p.last_observed >= DATE '{lo}' AND p.first_observed < DATE '{hi}'\n"
-            f"    AND dp.time >= DATE '{lo}' AND dp.time < DATE '{hi}'{where_extra}"
-        )
+        for period_partner, token, period_lo, period_hi in periods:
+            table = "data_points" if len(reporters) == 1 else f"eu_comext_{r}.data_points"
+            series_join = ""
+            if include_unit:
+                series_table = (
+                    "series" if len(reporters) == 1 else f"eu_comext_{r}.series"
+                )
+                series_join = f"  JOIN {series_table} s ON s.series_id = dp.series_id\n"
+            branches.append(
+                f"  SELECT {inner_select.format(reporter=r)}\n"
+                f"  FROM eu_comext_lookup.product_codes p\n"
+                f"  JOIN {table} dp\n"
+                f"    ON dp.series_id = "
+                f"{product_id_expr(flow, r, period_partner, token, suffix)}\n"
+                f"{series_join}"
+                f"  WHERE p.is_numeric_cn8\n"
+                f"    AND p.last_observed >= DATE '{period_lo}' "
+                f"AND p.first_observed < DATE '{period_hi}'\n"
+                f"    AND dp.time >= DATE '{period_lo}' "
+                f"AND dp.time < DATE '{period_hi}'{where_extra}"
+            )
     return "\nUNION ALL\n".join(branches)
 
 
@@ -259,6 +362,7 @@ def sql_products(args: argparse.Namespace) -> str:
             "across products; use value or weight"
         )
     lo, hi = date_bounds(args.start, args.end)
+    periods, period_note = trade_periods(partner, lo, hi)
 
     group_col = {
         "2": "p.hs2_code",
@@ -267,7 +371,7 @@ def sql_products(args: argparse.Namespace) -> str:
         "cn8": "lower(p.product_code)",
     }[args.group_by]
     inner = f"{group_col} AS code, dp.value AS v"
-    union = product_branches(reporters, partner, flow, suffix, lo, hi, inner, "")
+    union = product_branches(reporters, flow, suffix, periods, inner, "")
     body = (
         f"SELECT code, SUM(v) AS total_{suffix}\n"
         f"FROM (\n{union}\n) t\n"
@@ -280,10 +384,12 @@ def sql_products(args: argparse.Namespace) -> str:
         if args.group_by in ("2", "4", "6")
         else "CN8 names live in eu_comext_lookup.product_codes.product_name"
     )
-    note = add_note(
-        f"top products by HS{args.group_by}; values in {METRIC_UNITS[args.metric]}; {label_hint}",
-        domestic_note,
+    note = (
+        f"top products by HS{args.group_by}; values in "
+        f"{METRIC_UNITS[args.metric]}; {label_hint}"
     )
+    note = add_note(note, domestic_note)
+    note = add_note(note, period_note)
     return header(reporters, args, note) + "\n" + body
 
 
@@ -294,6 +400,7 @@ def sql_trend(args: argparse.Namespace) -> str:
     flow = flow_code(args.flow)
     suffix = METRICS[args.metric]
     lo, hi = date_bounds(args.start, args.end)
+    periods, period_note = trade_periods(partner, lo, hi)
 
     code = args.hs.strip().lower()
     if (
@@ -314,20 +421,35 @@ def sql_trend(args: argparse.Namespace) -> str:
             "queried for one exact 8-digit CN8 code"
         )
 
-    inner = "dp.time AS t, dp.value AS v"
+    include_unit = args.metric == "supplementary"
+    inner = (
+        "s.measurement_units AS unit, dp.time AS t, dp.value AS v"
+        if include_unit
+        else "dp.time AS t, dp.value AS v"
+    )
     union = product_branches(
-        reporters, partner, flow, suffix, lo, hi, inner, where_extra
+        reporters,
+        flow,
+        suffix,
+        periods,
+        inner,
+        where_extra,
+        include_unit=include_unit,
     )
-    body = (
-        f"SELECT t::date AS month, SUM(v) AS total_{suffix}\n"
-        f"FROM (\n{union}\n) u\n"
-        f"GROUP BY t\n"
-        f"ORDER BY t;"
-    )
-    note = add_note(
-        f"monthly trend for HS {code}; values in {METRIC_UNITS[args.metric]}",
-        domestic_note,
-    )
+    if include_unit:
+        body = (
+            f"SELECT unit AS measurement_units, t::date AS month, SUM(v) AS total_{suffix}\n"
+            f"FROM (\n{union}\n) u\nGROUP BY unit, t\nORDER BY t, unit;"
+        )
+        note = f"monthly trend for HS {code}; units returned with each row"
+    else:
+        body = (
+            f"SELECT t::date AS month, SUM(v) AS total_{suffix}\n"
+            f"FROM (\n{union}\n) u\nGROUP BY t\nORDER BY t;"
+        )
+        note = f"monthly trend for HS {code}; values in {METRIC_UNITS[args.metric]}"
+    note = add_note(note, domestic_note)
+    note = add_note(note, period_note)
     return header(reporters, args, note) + "\n" + body
 
 
@@ -346,7 +468,7 @@ def main() -> None:
         p.add_argument(
             "--partner",
             required=True,
-            help="partner country, lowercase ISO2 (cn, us, gb, ...)",
+            help="partner country ISO2; xi = Northern Ireland, uk = whole UK (gb + xi from 2021)",
         )
         p.add_argument("--flow", required=True, choices=["imports", "exports"])
         p.add_argument(

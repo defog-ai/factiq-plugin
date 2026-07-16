@@ -91,6 +91,9 @@ class SqlGeneratorTests(unittest.TestCase):
         self.assertIn("product-specific units", bad_sum.stderr)
         self.assertEqual(exact.returncode, 0, exact.stderr)
         self.assertIn("_su'", exact.stdout)
+        self.assertIn("s.measurement_units AS unit", exact.stdout)
+        self.assertIn("JOIN series s ON s.series_id = dp.series_id", exact.stdout)
+        self.assertIn("GROUP BY unit, t", exact.stdout)
 
     def test_trade_hs_level_override_aggregates_finer_lines(self):
         result = run_script(
@@ -195,6 +198,102 @@ class SqlGeneratorTests(unittest.TestCase):
         self.assertNotEqual(self_only.returncode, 0)
         self.assertIn("no domestic trade series", self_only.stderr)
 
+    def test_comext_uses_the_trade_token_valid_for_each_month(self):
+        common = (
+            "--reporters",
+            "de",
+            "--flow",
+            "imports",
+        )
+        pre_accession = run_script(
+            "comext_sql.py",
+            "total",
+            *common,
+            "--partner",
+            "pl",
+            "--start",
+            "2003-01",
+            "--end",
+            "2003-12",
+        )
+        brexit_span = run_script(
+            "comext_sql.py",
+            "trend",
+            *common,
+            "--partner",
+            "gb",
+            "--start",
+            "2019-12",
+            "--end",
+            "2020-03",
+            "--hs",
+            "8507",
+        )
+        northern_ireland = run_script(
+            "comext_sql.py",
+            "total",
+            *common,
+            "--partner",
+            "xi",
+            "--start",
+            "2022-01",
+            "--end",
+            "2022-12",
+        )
+        whole_uk = run_script(
+            "comext_sql.py",
+            "total",
+            *common,
+            "--partner",
+            "uk",
+            "--start",
+            "2020-12",
+            "--end",
+            "2021-02",
+            "--monthly",
+        )
+        unavailable_northern_ireland = run_script(
+            "comext_sql.py",
+            "total",
+            *common,
+            "--partner",
+            "xi",
+            "--start",
+            "2020-01",
+            "--end",
+            "2020-12",
+        )
+
+        self.assertEqual(pre_accession.returncode, 0, pre_accession.stderr)
+        self.assertIn("eu_comext_M_de_pl_te_p1", pre_accession.stdout)
+        self.assertNotIn("eu_comext_M_de_pl_ti_p1", pre_accession.stdout)
+
+        self.assertEqual(brexit_span.returncode, 0, brexit_span.stderr)
+        self.assertIn("eu_comext_M_de_gb_ti_p1", brexit_span.stdout)
+        self.assertIn("eu_comext_M_de_gb_te_p1", brexit_span.stdout)
+        self.assertIn(
+            "dp.time >= DATE '2019-12-01' AND dp.time < DATE '2020-02-01'",
+            brexit_span.stdout,
+        )
+        self.assertIn(
+            "dp.time >= DATE '2020-02-01' AND dp.time < DATE '2020-04-01'",
+            brexit_span.stdout,
+        )
+
+        self.assertEqual(northern_ireland.returncode, 0, northern_ireland.stderr)
+        self.assertIn("eu_comext_M_de_xi_tl_p1", northern_ireland.stdout)
+        self.assertNotIn("eu_comext_M_de_xi_te_p1", northern_ireland.stdout)
+        self.assertNotEqual(unavailable_northern_ireland.returncode, 0)
+        self.assertEqual(whole_uk.returncode, 0, whole_uk.stderr)
+        self.assertIn("eu_comext_M_de_gb_te_p1", whole_uk.stdout)
+        self.assertIn("eu_comext_M_de_xi_tl_p1", whole_uk.stdout)
+        self.assertIn(
+            "time >= DATE '2021-01-01' AND time < DATE '2021-03-01'",
+            whole_uk.stdout,
+        )
+        self.assertIn("whole UK", whole_uk.stdout)
+        self.assertIn("begin in 2021-01", unavailable_northern_ireland.stderr)
+
     def test_trade_combines_historical_china_partner_codes(self):
         common = (
             "--source",
@@ -260,9 +359,14 @@ class HsCodeTests(unittest.TestCase):
         blank = run_script("hs_codes.py", "--search", "   ")
         punctuation = run_script("hs_codes.py", "--search", ";;;")
         limit = run_script("hs_codes.py", "--search", "battery", "--limit", "0")
+        excessive_limit = run_script(
+            "hs_codes.py", "--search", "battery", "--limit", "101"
+        )
         self.assertIn("must contain", blank.stderr)
         self.assertIn("must contain", punctuation.stderr)
         self.assertNotEqual(limit.returncode, 0)
+        self.assertNotEqual(excessive_limit.returncode, 0)
+        self.assertIn("from 1 to 100", excessive_limit.stderr)
 
     def test_everyday_search_still_finds_lithium_ion_batteries(self):
         result = run_script(
@@ -438,13 +542,27 @@ class SeriesMathTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("must identify different columns", result.stderr)
 
-    def test_index_rejects_empty_payload(self):
-        path = self.payload("empty.json", ["month", "value"], [])
-        result = run_script(
-            "series_math.py", "index", "--file", path, "--base", "2025-01"
+    def test_arithmetic_commands_reject_empty_payload(self):
+        path = self.payload("empty.json", ["month", "reporter", "value"], [])
+        commands = (
+            ("yoy",),
+            ("ytd",),
+            ("share", "--group-col", "reporter"),
+            ("index", "--base", "2025-01"),
         )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("payload with no rows", result.stderr)
+        for command in commands:
+            with self.subTest(command=command[0]):
+                result = run_script(
+                    "series_math.py",
+                    *command,
+                    "--file",
+                    path,
+                    "--value-col",
+                    "value",
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("payload with no rows", result.stderr)
+                self.assertEqual(result.stdout, "")
 
     def test_ytd_preserves_large_decimal_sums(self):
         path = self.payload(
