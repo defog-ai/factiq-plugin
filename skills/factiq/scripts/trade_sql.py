@@ -23,14 +23,15 @@ Mirror caveat: each source is that country's own customs view; reporter
 views of the same flow differ on valuation, timing, and re-exports.
 
 Examples:
-  python3 scripts/trade_sql.py total --source census --partner China --flow imports \
+  python3 "{skill_dir}/scripts/trade_sql.py" total --source census --partner China --flow imports \
       --start 2025-01 --end 2025-12 --monthly
-  python3 scripts/trade_sql.py products --source india --partner "united states" \
+  python3 "{skill_dir}/scripts/trade_sql.py" products --source india --partner "united states" \
       --flow exports --start 2025-01 --end 2025-12 --group-by 2 --top 20
-  python3 scripts/trade_sql.py trend --source korea --partner cn --flow exports \
+  python3 "{skill_dir}/scripts/trade_sql.py" trend --source korea --partner cn --flow exports \
       --hs 854232 --start 2020-01 --end 2025-12
 
-Label the HS codes a products query returns with scripts/hs_codes.py.
+Here {skill_dir} is the absolute directory containing the FactIQ SKILL.md.
+Label the HS codes a products query returns with its bundled hs_codes.py.
 """
 
 from __future__ import annotations
@@ -430,7 +431,7 @@ def sql_products(args: argparse.Namespace) -> str:
         f"GROUP BY 1\nORDER BY 2 DESC\nLIMIT {args.top};"
     )
     label_hint = (
-        "name the codes locally: python3 scripts/hs_codes.py <codes>"
+        "name the codes locally with the bundled hs_codes.py helper"
         if group_digits in (2, 4, 6)
         else "national-line names live in dimensions.dimension_name (dimension_type='commodity')"
     )

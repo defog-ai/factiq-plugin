@@ -19,16 +19,17 @@ ID grammar it encodes:
     together. All-goods totals use the exact `cn6_total` product token.
 
 Examples:
-  python3 scripts/comext_sql.py total --reporters all --partner cn --flow imports \
+  python3 "{skill_dir}/scripts/comext_sql.py" total --reporters all --partner cn --flow imports \
       --start 2025-01 --end 2025-12
-  python3 scripts/comext_sql.py total --reporters de,fr,nl --partner us --flow exports \
+  python3 "{skill_dir}/scripts/comext_sql.py" total --reporters de,fr,nl --partner us --flow exports \
       --start 2024-01 --end 2025-12 --monthly
-  python3 scripts/comext_sql.py products --reporters all --partner cn --flow imports \
+  python3 "{skill_dir}/scripts/comext_sql.py" products --reporters all --partner cn --flow imports \
       --start 2025-01 --end 2025-12 --group-by 4 --top 25
-  python3 scripts/comext_sql.py trend --reporters de --partner cn --flow imports \
+  python3 "{skill_dir}/scripts/comext_sql.py" trend --reporters de --partner cn --flow imports \
       --hs 8507 --start 2020-01 --end 2025-12
 
-Label the HS codes a products/trend query returns with scripts/hs_codes.py.
+Here {skill_dir} is the absolute directory containing the FactIQ SKILL.md.
+Label the HS codes a products/trend query returns with its bundled hs_codes.py.
 """
 
 from __future__ import annotations
@@ -403,7 +404,7 @@ def sql_products(args: argparse.Namespace) -> str:
         f"LIMIT {args.top};"
     )
     label_hint = (
-        "name the codes locally: python3 scripts/hs_codes.py <codes>"
+        "name the codes locally with the bundled hs_codes.py helper"
         if args.group_by in ("2", "4", "6")
         else "CN8 names live in eu_comext_lookup.product_codes.product_name"
     )

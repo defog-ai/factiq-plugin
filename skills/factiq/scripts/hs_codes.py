@@ -9,9 +9,11 @@ server calls — use it instead of exploratory SQL when you need to find the
 code for a product or label codes a ranking query returned.
 
 Examples:
-  python3 scripts/hs_codes.py 85 8507 850760      # code -> name
-  python3 scripts/hs_codes.py --search battery     # name -> codes (all levels)
-  python3 scripts/hs_codes.py --search "lithium" --level 6
+  python3 "{skill_dir}/scripts/hs_codes.py" 85 8507 850760
+  python3 "{skill_dir}/scripts/hs_codes.py" --search battery
+  python3 "{skill_dir}/scripts/hs_codes.py" --search "lithium" --level 6
+
+Here {skill_dir} is the absolute directory containing the FactIQ SKILL.md.
 """
 
 from __future__ import annotations

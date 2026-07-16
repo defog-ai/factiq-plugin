@@ -2,7 +2,7 @@
 """Deterministic arithmetic on fetched FactIQ results — no in-context math.
 
 Reads the payload JSON that run_sql / get_series return (save it to disk with
-`python3 scripts/build_viz.py save --match "<distinctive fragment>" --out f.json`
+the bundled `build_viz.py save --match "<distinctive fragment>" --out f.json`
 so the bytes never pass through your output) and prints a computed table.
 Use this instead of computing growth rates, shares, or unit conversions in
 your own tokens: the script's arithmetic is exact and repeatable.
@@ -16,12 +16,14 @@ Subcommands:
            with a label and optionally rescaling values (unit alignment)
 
 Examples:
-  python3 scripts/series_math.py yoy --file cn_imports.json
-  python3 scripts/series_math.py share --file by_reporter.json --group-col reporter
-  python3 scripts/series_math.py index --file trend.json --base 2022-01 --group-col reporter
+  python3 "{skill_dir}/scripts/series_math.py" yoy --file cn_imports.json
+  python3 "{skill_dir}/scripts/series_math.py" share --file by_reporter.json --group-col reporter
+  python3 "{skill_dir}/scripts/series_math.py" index --file trend.json --base 2022-01 --group-col reporter
   # India is US$ Million, Korea US$ Thousand -> align both to US$ Million:
-  python3 scripts/series_math.py merge --input india=india.json \
+  python3 "{skill_dir}/scripts/series_math.py" merge --input india=india.json \
       --input korea=korea.json:0.001
+
+Here {skill_dir} is the absolute directory containing the FactIQ SKILL.md.
 """
 
 from __future__ import annotations

@@ -133,10 +133,12 @@ can't find the national aggregate, say so rather than substituting.
 **Don't hand-write bilateral-trade SQL — generate it.** The plugin bundles
 stdlib-only generators that encode every schema's ID grammar, partner codes,
 units, and HS-level rules (run `--help` for subcommands):
-`scripts/trade_sql.py` covers the six national customs schemas (census
+`{skill_dir}/scripts/trade_sql.py` covers the six national customs schemas (census
 `us_census_hs`, `china_customs`, `india_trade`, `korea_trade`, `japan_trade`,
-`taiwan_trade`), `scripts/comext_sql.py` covers the 27 Eurostat Comext
-schemas, and `scripts/hs_codes.py` resolves HS codes <-> names offline.
+`taiwan_trade`), `{skill_dir}/scripts/comext_sql.py` covers the 27 Eurostat
+Comext schemas, and `{skill_dir}/scripts/hs_codes.py` resolves HS codes <->
+names offline. Resolve `{skill_dir}` to the directory containing `SKILL.md`
+before invoking them; never assume the shell is at the plugin root.
 
 For broad bilateral merchandise-trade questions, use
 `references/report-patterns/bilateral-trade.md`; it has the report trigger and ready SQL

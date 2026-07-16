@@ -203,10 +203,10 @@ Where the behavior lives — the files contributors will touch:
   synthesis) all reports follow and routes each domain to its playbook, so
   adding a playbook doesn't touch SKILL.md
 - `commands/ask.md` — the `/factiq:ask` slash command (Claude Code)
-- `scripts/term_chart.py` — stdlib-only renderer that prints ANSI/ASCII
+- `skills/factiq/scripts/term_chart.py` — stdlib-only renderer that prints ANSI/ASCII
   terminal previews from FactIQ ChartSpec JSON and `share_report` report
   objects. It supports bar, simple line, and table fallback renderers
-- `scripts/build_viz.py` — local-only tool that assembles fetched data into a
+- `skills/factiq/scripts/build_viz.py` — local-only tool that assembles fetched data into a
   self-contained HTML viz and screenshots it headless for iteration; usage in
   [`references/output/viz-guide.md`](references/output/viz-guide.md)
 - `assets/viz-shell.html` — starting-point shell for bespoke visualizations
@@ -268,7 +268,7 @@ macro-risk snapshots.
 ### Other welcome contributions
 
 - **Terminal renderers** — new chart types or better ASCII/ANSI output in
-  `scripts/term_chart.py` (keep it stdlib-only).
+  `skills/factiq/scripts/term_chart.py` (keep it stdlib-only).
 - **Viz recipes** — reusable patterns for `build_viz.py` and
   `references/output/viz-guide.md`.
 - **SQL idioms and pitfalls** — additions to `references/data/sql-guide.md`
