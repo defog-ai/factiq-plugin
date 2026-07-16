@@ -1,10 +1,12 @@
 # FactIQ SQL Guide
 
-SQL runs read-only against one schema per call — the `run_sql` MCP tool, with
-`schema="bls"` and `sql="..."`. The server sets `search_path` to that schema,
-so reference tables bare (`series`, not `bls.series`). Statements are capped at
-30 seconds, and **every result is capped at 50 rows** — aggregate in SQL to the
-granularity you actually need rather than pulling raw rows (see "Pivoting" and
+SQL runs read-only with one default schema per call — the `run_sql` MCP tool,
+with `schema="bls"` and `sql="..."`. The server sets `search_path` to that
+schema, so reference its tables bare (`series`, not `bls.series`); other
+schemas stay reachable by qualified name (`korea_trade.series`,
+`eu_comext_lookup.product_codes`). Statements are capped at 30 seconds, and
+**every result is capped at 50 rows** — aggregate in SQL to the granularity
+you actually need rather than pulling raw rows (see "Pivoting" and
 "Efficiency" below).
 
 ## Table structure (identical in every schema)
@@ -80,7 +82,10 @@ their data.
 `data_points` is enormous and its index does not serve LIKE/ILIKE — even an
 anchored pattern (`series_id LIKE 'us\_census\_hs\_M\_10d\_280530%'`) scans
 the whole table and dies at the 30s timeout. The same pattern against the
-small `series` catalog is fast.
+small `series` catalog is fast. (Exception: the Eurostat Comext country
+catalogs are not small — millions of series each — and their text collation
+defeats prefix-index use entirely; never pattern-scan `series_id` there. See
+the Comext section below.)
 
 The server rewrites WHERE-clause LIKE/ILIKE on `data_points.series_id` into
 `series_id IN (SELECT series_id FROM series WHERE ...)` automatically (the
@@ -143,9 +148,13 @@ The core guardrails:
   `measurement_units = 'US$ Thousand'`.
 - Normalize units before comparing reporters. For example, India DGCI&S values
   are `US$ Million`, while Korea KCS values are `US$ Thousand`.
-- Query each reporter schema separately, then compare in local computation.
-  Mirror statistics differ because of timing, valuation, re-exports, and
-  revisions; state the reporter view explicitly.
+- Query each reporter schema separately by default and compare in local
+  computation — mirror statistics differ on units, timing, valuation,
+  re-exports, and revisions, so state the reporter view explicitly. The
+  one-schema scope is only a default search path, not a wall: qualified
+  cross-schema references do execute, so a `UNION ALL` of per-reporter
+  aggregations in one call is fine when every branch converts to a common
+  unit.
 
 ### Eurostat Comext country schemas
 
@@ -154,6 +163,13 @@ Comext uses one physical schema per EU reporter, named
 and `eu_comext_nl`. There is no `eu_comext` data schema. Each country catalog
 is large enough that title searches and dimension-value scans can reach the
 30-second SQL limit.
+
+Exact series IDs are mandatory here, not just faster. Each country catalog
+holds millions of series, and the text collation is not byte-ordered, so
+`series_id LIKE 'prefix%'` cannot run on the index (it scans the table and
+hits the 30-second timeout) and `>=`/`<` string ranges over `series_id`
+return wrong or empty results. Equality joins on constructed IDs are index
+probes and stay fast at any scale.
 
 Use these rules:
 
@@ -172,8 +188,12 @@ Use these rules:
   quantity. Never sum these metrics together.
 - For all-goods totals, use the exact `cn6_total` series instead of summing
   every CN8 product.
-- Run one already-aggregated query per reporter schema, then combine the small
-  results locally. Do not join or union the large country tables.
+- For several reporters, either run one already-aggregated query per reporter
+  schema and combine the small results locally, or `UNION ALL` the
+  per-reporter aggregations in a single call — a union of exact-ID joins
+  across all 27 member schemas completes well within the 30-second limit.
+  What times out is pattern scanning, not combining: every branch must use
+  the exact-ID join, never a `series_id` pattern.
 
 To inspect product mappings, qualify the shared table from any country query:
 
@@ -219,6 +239,34 @@ WHERE series_id = 'eu_comext_M_de_cn_te_p1_cn6_total_eur'
   AND time >= DATE '2025-01-01'
   AND time < DATE '2026-01-01'
 ORDER BY time;
+```
+
+For several reporters in one call, `UNION ALL` the same exact-ID aggregation
+per country schema. This tested example returns 2025 German- and
+French-reported electronics (HS chapter 85) imports from China; run it with
+`schema="eu_comext_de"` (any Comext schema works as the default):
+
+```sql
+SELECT cc, SUM(v) AS value_eur
+FROM (
+  SELECT 'de' AS cc, dp.value AS v
+  FROM eu_comext_lookup.product_codes p
+  JOIN eu_comext_de.data_points dp
+    ON dp.series_id =
+       'eu_comext_M_de_cn_te_p1_cn8_' || lower(p.product_code) || '_eur'
+  WHERE p.hs2_code = '85'
+    AND dp.time >= DATE '2025-01-01' AND dp.time < DATE '2026-01-01'
+  UNION ALL
+  SELECT 'fr', dp.value
+  FROM eu_comext_lookup.product_codes p
+  JOIN eu_comext_fr.data_points dp
+    ON dp.series_id =
+       'eu_comext_M_fr_cn_te_p1_cn8_' || lower(p.product_code) || '_eur'
+  WHERE p.hs2_code = '85'
+    AND dp.time >= DATE '2025-01-01' AND dp.time < DATE '2026-01-01'
+) t
+GROUP BY cc
+ORDER BY cc;
 ```
 
 ## Pivoting to wide format
