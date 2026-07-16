@@ -382,6 +382,55 @@ class SqlGeneratorTests(unittest.TestCase):
         self.assertEqual(alias.returncode, 0, alias.stderr)
         self.assertIn("dimension_code = 'US'", alias.stdout)
 
+    def test_trade_rejects_unsupported_eu_aggregate_without_hiding_exact_codes(self):
+        common = (
+            "total",
+            "--flow",
+            "imports",
+            "--start",
+            "2025-01",
+            "--end",
+            "2025-12",
+        )
+        for partner in ("euro", "EU-27", "European Union"):
+            with self.subTest(partner=partner):
+                unsupported = run_script(
+                    "trade_sql.py",
+                    *common,
+                    "--source",
+                    "china",
+                    "--partner",
+                    partner,
+                )
+                self.assertNotEqual(unsupported.returncode, 0)
+                self.assertEqual(unsupported.stdout, "")
+                self.assertIn("no European Union aggregate partner", unsupported.stderr)
+                self.assertIn("comext_sql.py", unsupported.stderr)
+                self.assertNotIn("Traceback", unsupported.stderr)
+
+        census_eu = run_script(
+            "trade_sql.py",
+            *common,
+            "--source",
+            "census",
+            "--partner",
+            "EU-27",
+        )
+        exact_china_code = run_script(
+            "trade_sql.py",
+            *common,
+            "--source",
+            "china",
+            "--partner",
+            "399",
+        )
+        self.assertEqual(census_eu.returncode, 0, census_eu.stderr)
+        self.assertIn("dimension_code = '0003'", census_eu.stdout)
+        self.assertIn("European Union", census_eu.stdout)
+        self.assertEqual(exact_china_code.returncode, 0, exact_china_code.stderr)
+        self.assertIn("dimension_code = '399'", exact_china_code.stdout)
+        self.assertIn("Other European Territories", exact_china_code.stdout)
+
 
 class HsCodeTests(unittest.TestCase):
     def test_lookup_requires_numeric_code(self):

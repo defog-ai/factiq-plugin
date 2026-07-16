@@ -183,6 +183,15 @@ def normalize_partner_name(text: str) -> str:
     return "".join(char for char in text.casefold() if char.isalnum())
 
 
+EU_AGGREGATE_QUERIES = {
+    "eu",
+    "eu27",
+    "euro",
+    "europeanunion",
+    "europeanunion27",
+}
+
+
 def same_name_codes(partners: dict[str, str], name: str) -> list[str]:
     """Return every code whose display name denotes the same partner."""
     normalized_name = normalize_partner_name(name)
@@ -238,6 +247,19 @@ def resolve_partner(source: str, text: str) -> tuple[list[str], str]:
     normalized_query = normalize_partner_name(query)
     if not normalized_query:
         fail("--partner must contain at least one letter or number")
+    # Do not let an EU/EU-27 request fall through to fuzzy matching. Some
+    # national customs maps contain names such as "Other European Territories"
+    # but do not publish a European Union aggregate, so a fragment like
+    # "euro" could otherwise produce valid-looking SQL for the wrong geography.
+    if normalized_query in EU_AGGREGATE_QUERIES:
+        eu_codes = same_name_codes(partners, "European Union")
+        if not eu_codes:
+            fail(
+                f"source '{source}' has no European Union aggregate partner — "
+                "query EU member countries separately, or use comext_sql.py "
+                "for EU-reported trade"
+            )
+        return eu_codes, partners[eu_codes[0]]
     # 2. curated alias ("united states", "south korea", "uae", ...).
     # Normalize aliases too, so "U.S." and repeated spaces work as expected.
     alias_matches = {
