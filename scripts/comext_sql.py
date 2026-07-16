@@ -27,16 +27,42 @@ Examples:
 
 Label the HS codes a products/trend query returns with scripts/hs_codes.py.
 """
+
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 
 EU_MEMBERS = [
-    "at", "be", "bg", "hr", "cy", "cz", "dk", "ee", "fi", "fr", "de", "gr",
-    "hu", "ie", "it", "lv", "lt", "lu", "mt", "nl", "pl", "pt", "ro", "sk",
-    "si", "es", "se",
+    "at",
+    "be",
+    "bg",
+    "hr",
+    "cy",
+    "cz",
+    "dk",
+    "ee",
+    "fi",
+    "fr",
+    "de",
+    "gr",
+    "hu",
+    "ie",
+    "it",
+    "lv",
+    "lt",
+    "lu",
+    "mt",
+    "nl",
+    "pl",
+    "pt",
+    "ro",
+    "sk",
+    "si",
+    "es",
+    "se",
 ]
 
 METRICS = {"value": "eur", "weight": "kg", "supplementary": "su"}
@@ -49,12 +75,12 @@ def fail(message: str, code: int = 1) -> None:
 
 
 def parse_month(text: str, name: str) -> tuple[int, int]:
-    parts = text.split("-")
-    if len(parts) != 2 or not (parts[0].isdigit() and parts[1].isdigit()):
+    match = re.fullmatch(r"([0-9]{4})-(0[1-9]|1[0-2])", text)
+    if match is None:
         fail(f"--{name} must be YYYY-MM, got '{text}'")
-    year, month = int(parts[0]), int(parts[1])
-    if not 1 <= month <= 12:
-        fail(f"--{name} month out of range in '{text}'")
+    year, month = map(int, match.groups())
+    if year == 0:
+        fail(f"--{name} year must be between 0001 and 9999, got '{text}'")
     return year, month
 
 
@@ -64,6 +90,8 @@ def date_bounds(start: str, end: str) -> tuple[str, str]:
     ey, em = parse_month(end, "end")
     if (sy, sm) > (ey, em):
         fail(f"--start {start} is after --end {end}")
+    if (ey, em) == (9999, 12):
+        fail("--end 9999-12 cannot be represented as an exclusive upper date bound")
     ny, nm = (ey + 1, 1) if em == 12 else (ey, em + 1)
     return f"{sy:04d}-{sm:02d}-01", f"{ny:04d}-{nm:02d}-01"
 
@@ -78,16 +106,29 @@ def resolve_reporters(text: str) -> list[str]:
             f"unknown reporter(s) {bad}: reporters are the 27 EU members as "
             f"lowercase ISO2 ({', '.join(EU_MEMBERS)}) or 'all'"
         )
-    return reporters
+    if not reporters:
+        fail("--reporters must contain at least one EU member, or 'all'")
+    # Repeating a reporter would repeat its UNION branch and double-count it.
+    return list(dict.fromkeys(reporters))
 
 
 def resolve_partner(text: str) -> str:
     partner = text.strip().lower()
-    if not (len(partner) == 2 and partner.isalpha()):
+    if re.fullmatch(r"[a-z]{2}", partner, flags=re.ASCII) is None:
         fail(
             f"--partner must be a lowercase ISO2 country code (e.g. cn, us, gb, in), got '{text}'"
         )
     return partner
+
+
+def limited_positive_int(text: str) -> int:
+    try:
+        value = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError("must be an integer from 1 to 50") from None
+    if not 1 <= value <= 50:
+        raise argparse.ArgumentTypeError("must be from 1 to 50")
+    return value
 
 
 def trade_token(partner: str) -> str:
@@ -122,6 +163,11 @@ def sql_total(args: argparse.Namespace) -> str:
     reporters = resolve_reporters(args.reporters)
     partner = resolve_partner(args.partner)
     flow = flow_code(args.flow)
+    if args.metric == "supplementary":
+        fail(
+            "supplementary quantities use product-specific units and cannot form an "
+            "all-goods total; use value or weight"
+        )
     suffix = METRICS[args.metric]
     lo, hi = date_bounds(args.start, args.end)
 
@@ -139,9 +185,15 @@ def sql_total(args: argparse.Namespace) -> str:
         )
     union = "\nUNION ALL\n".join(branches)
     if args.monthly:
-        select, group = f"t::date AS month, SUM(v) AS total_{suffix}", "GROUP BY t\nORDER BY t"
+        select, group = (
+            f"t::date AS month, SUM(v) AS total_{suffix}",
+            "GROUP BY t\nORDER BY t",
+        )
     else:
-        select, group = f"reporter, SUM(v) AS total_{suffix}", "GROUP BY reporter\nORDER BY 2 DESC"
+        select, group = (
+            f"reporter, SUM(v) AS total_{suffix}",
+            "GROUP BY reporter\nORDER BY 2 DESC",
+        )
     body = f"SELECT {select}\nFROM (\n{union}\n) u\n{group};"
     note = f"all-goods total via the exact cn6_total series; values in {METRIC_UNITS[args.metric]}"
     return header(reporters, args, note) + "\n" + body
@@ -177,6 +229,11 @@ def sql_products(args: argparse.Namespace) -> str:
     partner = resolve_partner(args.partner)
     flow = flow_code(args.flow)
     suffix = METRICS[args.metric]
+    if args.metric == "supplementary":
+        fail(
+            "supplementary quantities use product-specific units and cannot be ranked "
+            "across products; use value or weight"
+        )
     lo, hi = date_bounds(args.start, args.end)
 
     group_col = {
@@ -211,16 +268,28 @@ def sql_trend(args: argparse.Namespace) -> str:
     lo, hi = date_bounds(args.start, args.end)
 
     code = args.hs.strip().lower()
-    if len(code) not in (2, 4, 6, 8) or not code.isalnum():
-        fail(f"--hs must be a 2/4/6-digit HS code or an 8-digit CN8 code, got '{args.hs}'")
+    if (
+        len(code) not in (2, 4, 6, 8)
+        or re.fullmatch(r"[0-9]+", code, flags=re.ASCII) is None
+    ):
+        fail(
+            f"--hs must be a 2/4/6-digit HS code or an 8-digit CN8 code, got '{args.hs}'"
+        )
     if len(code) == 8:
         where_extra = f"\n    AND lower(p.product_code) = '{code}'"
     else:
         col = {2: "p.hs2_code", 4: "p.hs4_code", 6: "p.hs6_code"}[len(code)]
         where_extra = f"\n    AND {col} = '{code}'"
+    if args.metric == "supplementary" and len(code) != 8:
+        fail(
+            "supplementary quantities use product-specific units and can only be "
+            "queried for one exact 8-digit CN8 code"
+        )
 
     inner = "dp.time AS t, dp.value AS v"
-    union = product_branches(reporters, partner, flow, suffix, lo, hi, inner, where_extra)
+    union = product_branches(
+        reporters, partner, flow, suffix, lo, hi, inner, where_extra
+    )
     body = (
         f"SELECT t::date AS month, SUM(v) AS total_{suffix}\n"
         f"FROM (\n{union}\n) u\n"
@@ -238,28 +307,67 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
 
     def add_common(p: argparse.ArgumentParser) -> None:
-        p.add_argument("--reporters", required=True, help="comma-separated lowercase ISO2 EU members, or 'all'")
-        p.add_argument("--partner", required=True, help="partner country, lowercase ISO2 (cn, us, gb, ...)")
+        p.add_argument(
+            "--reporters",
+            required=True,
+            help="comma-separated lowercase ISO2 EU members, or 'all'",
+        )
+        p.add_argument(
+            "--partner",
+            required=True,
+            help="partner country, lowercase ISO2 (cn, us, gb, ...)",
+        )
         p.add_argument("--flow", required=True, choices=["imports", "exports"])
-        p.add_argument("--start", required=True, help="first month, YYYY-MM (inclusive)")
+        p.add_argument(
+            "--start", required=True, help="first month, YYYY-MM (inclusive)"
+        )
         p.add_argument("--end", required=True, help="last month, YYYY-MM (inclusive)")
-        p.add_argument("--metric", default="value", choices=sorted(METRICS), help="default: value (EUR)")
+        p.add_argument(
+            "--metric",
+            default="value",
+            choices=sorted(METRICS),
+            help="default: value (EUR)",
+        )
 
-    p_total = sub.add_parser("total", help="all-goods totals via the exact cn6_total series")
+    p_total = sub.add_parser(
+        "total", help="all-goods totals via the exact cn6_total series"
+    )
     add_common(p_total)
-    p_total.add_argument("--monthly", action="store_true", help="one row per month instead of one per reporter")
+    p_total.add_argument(
+        "--monthly",
+        action="store_true",
+        help="one row per month instead of one per reporter",
+    )
 
-    p_products = sub.add_parser("products", help="top products via the lookup-table join")
+    p_products = sub.add_parser(
+        "products", help="top products via the lookup-table join"
+    )
     add_common(p_products)
-    p_products.add_argument("--group-by", default="4", choices=["2", "4", "6", "cn8"], help="HS grouping level (default 4)")
-    p_products.add_argument("--top", type=int, default=25, help="rows to return (default 25, tool cap 50)")
+    p_products.add_argument(
+        "--group-by",
+        default="4",
+        choices=["2", "4", "6", "cn8"],
+        help="HS grouping level (default 4)",
+    )
+    p_products.add_argument(
+        "--top",
+        type=limited_positive_int,
+        default=25,
+        help="rows to return, 1-50 (default 25)",
+    )
 
     p_trend = sub.add_parser("trend", help="monthly trend for one HS group or CN8 line")
     add_common(p_trend)
-    p_trend.add_argument("--hs", required=True, help="2/4/6-digit HS code or 8-digit CN8 code")
+    p_trend.add_argument(
+        "--hs", required=True, help="2/4/6-digit HS code or 8-digit CN8 code"
+    )
 
     args = parser.parse_args()
-    print({"total": sql_total, "products": sql_products, "trend": sql_trend}[args.command](args))
+    print(
+        {"total": sql_total, "products": sql_products, "trend": sql_trend}[
+            args.command
+        ](args)
+    )
 
 
 if __name__ == "__main__":
