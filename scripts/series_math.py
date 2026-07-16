@@ -221,6 +221,7 @@ def split_rows(args, columns, rows):
         columns, args.value_col, {t_idx} | ({g_idx} if g_idx is not None else set())
     )
     groups: dict[str, list] = {}
+    group_identities: dict[str, tuple[str, str]] = {}
     frequency: str | None = None
     seen: set[tuple[str, int, int]] = set()
     for row in rows:
@@ -231,7 +232,19 @@ def split_rows(args, columns, rows):
             fail(
                 f"mixed time frequencies in one payload: found both {frequency} and {kind}"
             )
-        key = str(row[g_idx]) if g_idx is not None else ""
+        if g_idx is not None:
+            raw_key = row[g_idx]
+            key = str(raw_key)
+            identity = (type(raw_key).__name__, repr(raw_key))
+            previous_identity = group_identities.get(key)
+            if previous_identity is not None and previous_identity != identity:
+                fail(
+                    f"group values with different JSON types both render as {key!r}; "
+                    "use one consistent type in the group column"
+                )
+            group_identities[key] = identity
+        else:
+            key = ""
         period_key = (key, year, period)
         if period_key in seen:
             fail(
@@ -399,39 +412,61 @@ def pick_merge_value_col(columns: list[str], requested: str | None) -> int:
     raise AssertionError  # unreachable
 
 
+def parse_merge_input(spec: str) -> tuple[str, str, Decimal, bool]:
+    """Parse label=path[:factor], preserving existing paths containing colons."""
+    if "=" not in spec:
+        fail(f"--input must be label=path[:factor], got '{spec}'")
+    label, rest = spec.split("=", 1)
+    if not label.strip() or not rest:
+        fail(f"--input needs a non-empty label and path, got '{spec}'")
+    if label != label.strip() or any(char in label for char in "\t\r\n"):
+        fail(
+            f"--input label must not have leading/trailing or control whitespace: '{label}'"
+        )
+
+    factor = Decimal(1)
+    factor_supplied = False
+    path = rest
+    # Prefer an existing path verbatim, since ':' is legal in POSIX file names.
+    # Otherwise a numeric final segment is the optional scale factor. This also
+    # supports payload files without a .json extension.
+    if ":" in rest and not os.path.exists(rest):
+        possible_path, factor_s = rest.rsplit(":", 1)
+        try:
+            possible_factor = Decimal(factor_s)
+        except InvalidOperation:
+            possible_factor = None
+            if possible_path and os.path.exists(possible_path):
+                fail(f"scale factor in --input {spec!r} is not a number")
+        if possible_factor is not None:
+            if not possible_path:
+                fail(f"--input needs a non-empty path, got '{spec}'")
+            if not possible_factor.is_finite():
+                fail(f"non-finite value {factor_s!r} in --input {spec}")
+            if possible_factor <= 0:
+                fail(f"scale factor in --input {spec!r} must be greater than zero")
+            ensure_fixed_size(possible_factor, f"scale factor in --input {spec}")
+            path, factor, factor_supplied = possible_path, possible_factor, True
+    return label, path, factor, factor_supplied
+
+
 def cmd_merge(args) -> None:
     out = []
     header: list[str] | None = None
     scale_idx: int | None = None
     labels: set[str] = set()
+    parsed_inputs = []
     for spec in args.input:
-        if "=" not in spec:
-            fail(f"--input must be label=path[:factor], got '{spec}'")
-        label, rest = spec.split("=", 1)
-        if not label.strip() or not rest:
-            fail(f"--input needs a non-empty label and path, got '{spec}'")
-        if label != label.strip() or any(char in label for char in "\t\r\n"):
-            fail(
-                f"--input label must not have leading/trailing or control whitespace: '{label}'"
-            )
+        label, path, factor, factor_supplied = parse_merge_input(spec)
         if label in labels:
             fail(f"duplicate --input label '{label}'")
         labels.add(label)
-        factor = Decimal(1)
-        path = rest
-        # Prefer an existing path verbatim, since ':' is legal in POSIX file names.
-        # Otherwise a numeric final segment is the optional scale factor. This also
-        # supports payload files without a .json extension.
-        if ":" in rest and not os.path.exists(rest):
-            possible_path, factor_s = rest.rsplit(":", 1)
-            try:
-                possible_factor = Decimal(factor_s)
-            except InvalidOperation:
-                possible_factor = None
-            if possible_path and possible_factor is not None:
-                if not possible_factor.is_finite():
-                    fail(f"non-finite value {factor_s!r} in --input {spec}")
-                path, factor = possible_path, possible_factor
+        parsed_inputs.append((label, path, factor, factor_supplied))
+
+    validate_values = args.value_col is not None or any(
+        factor_supplied for *_, factor_supplied in parsed_inputs
+    )
+    for label, path, factor, _ in parsed_inputs:
         columns, rows = load_table(path)
         if "source" in columns:
             fail(
@@ -442,11 +477,11 @@ def cmd_merge(args) -> None:
             header = ["source"] + columns
         elif columns != header[1:]:
             fail(f"{path} columns {columns} differ from first file's {header[1:]}")
-        if scale_idx is None and (args.value_col or factor != 1):
+        if scale_idx is None and validate_values:
             scale_idx = pick_merge_value_col(columns, args.value_col)
         for row in rows:
             merged = list(row)
-            if factor != 1:
+            if validate_values:
                 assert scale_idx is not None
                 merged[scale_idx] = exact_product(
                     merged[scale_idx], factor, f"{path} row {row}"

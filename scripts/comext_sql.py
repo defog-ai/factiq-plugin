@@ -85,6 +85,7 @@ EU_ACCESSION_MONTH = {
     "ro": "2007-01-01",
     "hr": "2013-07-01",
 }
+COMEXT_START = "2002-01-01"
 GB_EXTRA_EU_MONTH = "2020-02-01"
 NORTHERN_IRELAND_START = "2021-01-01"
 
@@ -117,6 +118,23 @@ def date_bounds(start: str, end: str) -> tuple[str, str]:
         fail("--end 9999-12 cannot be represented as an exclusive upper date bound")
     ny, nm = (ey + 1, 1) if em == 12 else (ey, em + 1)
     return f"{sy:04d}-{sm:02d}-01", f"{ny:04d}-{nm:02d}-01"
+
+
+def comext_date_bounds(start: str, end: str) -> tuple[str, str, str]:
+    """Return usable Comext bounds and a note when early months are clipped."""
+    lo, hi = date_bounds(start, end)
+    if hi <= COMEXT_START:
+        fail(
+            f"Comext data begin in 2002-01; requested range {start}..{end} "
+            "ends before coverage"
+        )
+    if lo < COMEXT_START:
+        return (
+            COMEXT_START,
+            hi,
+            "Comext data begin in 2002-01; earlier requested months omitted",
+        )
+    return lo, hi, ""
 
 
 def resolve_reporters(text: str) -> list[str]:
@@ -189,9 +207,7 @@ def trade_periods(
             if note and not note.startswith("Northern Ireland is stored separately")
         ]
         if hi > NORTHERN_IRELAND_START:
-            periods.append(
-                ("xi", "tl", max(lo, NORTHERN_IRELAND_START), hi)
-            )
+            periods.append(("xi", "tl", max(lo, NORTHERN_IRELAND_START), hi))
             notes.append(
                 "whole UK combines the gb and Northern Ireland xi series from 2021-01"
             )
@@ -222,7 +238,9 @@ def trade_periods(
                 "extra-EU series in 2020-02"
             )
         if hi > NORTHERN_IRELAND_START:
-            notes.append("Northern Ireland is stored separately as partner xi from 2021-01")
+            notes.append(
+                "Northern Ireland is stored separately as partner xi from 2021-01"
+            )
         return periods, "; ".join(notes)
 
     accession = EU_ACCESSION_MONTH.get(partner)
@@ -280,7 +298,7 @@ def sql_total(args: argparse.Namespace) -> str:
             "all-goods total; use value or weight"
         )
     suffix = METRICS[args.metric]
-    lo, hi = date_bounds(args.start, args.end)
+    lo, hi, coverage_note = comext_date_bounds(args.start, args.end)
     periods, period_note = trade_periods(partner, lo, hi)
 
     # Each reporter schema holds only its own series in data_points, so every
@@ -289,7 +307,9 @@ def sql_total(args: argparse.Namespace) -> str:
     branches = []
     for r in reporters:
         for period_partner, token, period_lo, period_hi in periods:
-            table = "data_points" if len(reporters) == 1 else f"eu_comext_{r}.data_points"
+            table = (
+                "data_points" if len(reporters) == 1 else f"eu_comext_{r}.data_points"
+            )
             branches.append(
                 f"  SELECT '{r}' AS reporter, time AS t, value AS v\n"
                 f"  FROM {table}\n"
@@ -311,6 +331,7 @@ def sql_total(args: argparse.Namespace) -> str:
     body = f"SELECT {select}\nFROM (\n{union}\n) u\n{group};"
     note = f"all-goods total via the exact cn6_total series; values in {METRIC_UNITS[args.metric]}"
     note = add_note(note, domestic_note)
+    note = add_note(note, coverage_note)
     note = add_note(note, period_note)
     return header(reporters, args, note) + "\n" + body
 
@@ -327,7 +348,9 @@ def product_branches(
     branches = []
     for r in reporters:
         for period_partner, token, period_lo, period_hi in periods:
-            table = "data_points" if len(reporters) == 1 else f"eu_comext_{r}.data_points"
+            table = (
+                "data_points" if len(reporters) == 1 else f"eu_comext_{r}.data_points"
+            )
             series_join = ""
             if include_unit:
                 series_table = (
@@ -361,7 +384,7 @@ def sql_products(args: argparse.Namespace) -> str:
             "supplementary quantities use product-specific units and cannot be ranked "
             "across products; use value or weight"
         )
-    lo, hi = date_bounds(args.start, args.end)
+    lo, hi, coverage_note = comext_date_bounds(args.start, args.end)
     periods, period_note = trade_periods(partner, lo, hi)
 
     group_col = {
@@ -389,6 +412,7 @@ def sql_products(args: argparse.Namespace) -> str:
         f"{METRIC_UNITS[args.metric]}; {label_hint}"
     )
     note = add_note(note, domestic_note)
+    note = add_note(note, coverage_note)
     note = add_note(note, period_note)
     return header(reporters, args, note) + "\n" + body
 
@@ -399,7 +423,7 @@ def sql_trend(args: argparse.Namespace) -> str:
     reporters, domestic_note = remove_domestic_reporter(reporters, partner)
     flow = flow_code(args.flow)
     suffix = METRICS[args.metric]
-    lo, hi = date_bounds(args.start, args.end)
+    lo, hi, coverage_note = comext_date_bounds(args.start, args.end)
     periods, period_note = trade_periods(partner, lo, hi)
 
     code = args.hs.strip().lower()
@@ -449,6 +473,7 @@ def sql_trend(args: argparse.Namespace) -> str:
         )
         note = f"monthly trend for HS {code}; values in {METRIC_UNITS[args.metric]}"
     note = add_note(note, domestic_note)
+    note = add_note(note, coverage_note)
     note = add_note(note, period_note)
     return header(reporters, args, note) + "\n" + body
 

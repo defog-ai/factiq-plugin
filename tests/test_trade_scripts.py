@@ -294,6 +294,40 @@ class SqlGeneratorTests(unittest.TestCase):
         self.assertIn("whole UK", whole_uk.stdout)
         self.assertIn("begin in 2021-01", unavailable_northern_ireland.stderr)
 
+    def test_comext_clips_or_rejects_dates_before_coverage(self):
+        common = (
+            "total",
+            "--reporters",
+            "de",
+            "--partner",
+            "cn",
+            "--flow",
+            "imports",
+        )
+        spanning = run_script(
+            "comext_sql.py",
+            *common,
+            "--start",
+            "2001-12",
+            "--end",
+            "2002-02",
+        )
+        unavailable = run_script(
+            "comext_sql.py",
+            *common,
+            "--start",
+            "1990-01",
+            "--end",
+            "1999-12",
+        )
+        self.assertEqual(spanning.returncode, 0, spanning.stderr)
+        self.assertIn("time >= DATE '2002-01-01'", spanning.stdout)
+        self.assertNotIn("time >= DATE '2001-12-01'", spanning.stdout)
+        self.assertIn("earlier requested months omitted", spanning.stdout)
+        self.assertNotEqual(unavailable.returncode, 0)
+        self.assertEqual(unavailable.stdout, "")
+        self.assertIn("begin in 2002-01", unavailable.stderr)
+
     def test_trade_combines_historical_china_partner_codes(self):
         common = (
             "--source",
@@ -374,6 +408,11 @@ class HsCodeTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("850760", result.stdout)
+
+    def test_singular_search_is_not_hidden_by_literal_side_matches(self):
+        result = run_script("hs_codes.py", "--search", "battery", "--limit", "1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(result.stdout.startswith("8506\t(HS4)"), result.stdout)
 
     def test_code_lookup_does_not_emit_partial_results(self):
         result = run_script("hs_codes.py", "85", "not-a-code")
@@ -504,6 +543,34 @@ class SeriesMathTests(unittest.TestCase):
         )
         self.assertIn("duplicate --input label", result.stderr)
 
+    def test_merge_rejects_nonpositive_scale_factors(self):
+        path = self.payload("merge.json", ["month", "value"], [["2025-01", 100]])
+        for factor in ("0", "-0.001"):
+            with self.subTest(factor=factor):
+                result = run_script(
+                    "series_math.py", "merge", "--input", f"scaled={path}:{factor}"
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, "")
+                self.assertIn("greater than zero", result.stderr)
+
+    def test_merge_validates_unscaled_siblings_when_any_input_is_scaled(self):
+        bad = self.payload(
+            "bad.json", ["month", "value"], [["2025-01", "not-a-number"]]
+        )
+        good = self.payload("good.json", ["month", "value"], [["2025-01", 100]])
+        result = run_script(
+            "series_math.py",
+            "merge",
+            "--input",
+            f"bad={bad}",
+            "--input",
+            f"good={good}:0.001",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("non-numeric value", result.stderr)
+
     def test_merge_parses_factor_for_extensionless_file(self):
         path = self.payload("payload", ["month", "value"], [["2025-01", "100"]])
         result = run_script("series_math.py", "merge", "--input", f"korea={path}:0.001")
@@ -541,6 +608,19 @@ class SeriesMathTests(unittest.TestCase):
         )
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("must identify different columns", result.stderr)
+
+    def test_mixed_type_group_labels_cannot_collapse_into_one_series(self):
+        path = self.payload(
+            "mixed-groups.json",
+            ["month", "reporter", "value"],
+            [["2024-01", 1, 10], ["2025-01", "1", 20]],
+        )
+        result = run_script(
+            "series_math.py", "yoy", "--file", path, "--group-col", "reporter"
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("different JSON types", result.stderr)
 
     def test_arithmetic_commands_reject_empty_payload(self):
         path = self.payload("empty.json", ["month", "reporter", "value"], [])

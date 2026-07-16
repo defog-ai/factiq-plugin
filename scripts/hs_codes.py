@@ -104,49 +104,57 @@ def search(
     want = _tokens(term)
     if not want:
         fail("--search must contain at least one letter or number", code=2)
-    # Pass 1: literal substring — precise when the official wording is known.
-    hits = [
-        (lvl, code, name)
+    rows = [
+        (lvl, code, name, _tokens(name))
         for lvl in levels
         for code, name in sorted(names[lvl].items())
-        if term_l in name.lower()
     ]
-    # Pass 2: token match — HS wording rarely matches everyday phrasing
-    # ("lithium ion battery" is officially "Electric accumulators;
-    # lithium-ion"), so rank by how many query words a name contains and
-    # keep the best-scoring tier.
-    if not hits:
-        rows = [
-            (lvl, code, name, _tokens(name))
-            for lvl in levels
-            for code, name in sorted(names[lvl].items())
-        ]
-        # document frequency per query token: a match on a rare word
-        # ("memories") is worth more than one on a common word ("chips")
-        df = {t: sum(1 for *_, toks in rows if t in toks) or 1 for t in want}
-        scored = []
-        for lvl, code, name, toks in rows:
-            matched = want & toks
-            if matched:
-                scored.append(
-                    (len(matched), sum(1.0 / df[t] for t in matched), lvl, code, name)
-                )
-        if not scored:
-            fail(f"no HS names match '{term}' — try a shorter stem", code=2)
-        scored.sort(key=lambda r: (-r[0], -r[1], r[2], r[3]))
-        best = scored[0][0]
-        hits = [
-            (lvl, code, name)
-            for matched_count, _, lvl, code, name in scored
-            if matched_count == best
-        ]
-        if best < len(want):
-            print(
-                f"(no name contains all {len(want)} words — ranked by matches, rarest words first)",
-                file=sys.stderr,
+    # Rank literal fragments and plural-aware token matches together. Keeping
+    # them in one pool matters for queries such as "battery": a literal hit on
+    # "battery carbons" must not hide the more relevant "batteries" heading.
+    # A rare matched word outranks a common one, then concise names win.
+    df = {token: sum(1 for *_, toks in rows if token in toks) or 1 for token in want}
+    scored = []
+    for lvl, code, name, toks in rows:
+        literal = term_l in name.lower()
+        matched = want & toks
+        if not literal and not matched:
+            continue
+        effective_matches = want if literal else matched
+        scored.append(
+            (
+                len(effective_matches),
+                sum(1.0 / df[token] for token in effective_matches),
+                len(toks),
+                literal,
+                lvl,
+                code,
+                name,
             )
-    if not hits:
-        fail(f"no HS names contain '{term}' — try a shorter stem", code=2)
+        )
+    if not scored:
+        fail(f"no HS names match '{term}' — try a shorter stem", code=2)
+    scored.sort(
+        key=lambda row: (
+            -row[0],
+            -row[1],
+            row[2],
+            not row[3],
+            row[4],
+            row[5],
+        )
+    )
+    best = scored[0][0]
+    hits = [
+        (lvl, code, name)
+        for matched_count, _, _, _, lvl, code, name in scored
+        if matched_count == best
+    ]
+    if best < len(want):
+        print(
+            f"(no name contains all {len(want)} words — ranked by matches, rarest words first)",
+            file=sys.stderr,
+        )
     for lvl, code, name in hits[:limit]:
         print(f"{code}\t(HS{lvl})\t{name}")
     if len(hits) > limit:
