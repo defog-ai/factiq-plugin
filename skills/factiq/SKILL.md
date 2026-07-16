@@ -74,21 +74,22 @@ Five output modes:
 - The local scripts never touch the API:
 
   ```bash
-  python3 "{skill_dir}/scripts/term_chart.py" render ... # terminal ChartSpec preview
-  python3 "{skill_dir}/scripts/build_viz.py"  ...   # local visualization helper
-  python3 "{skill_dir}/scripts/comext_sql.py" ...   # SQL generator: Eurostat Comext (EU) trade
-  python3 "{skill_dir}/scripts/trade_sql.py"  ...   # SQL generator: US/China/India/Korea/Japan/Taiwan customs
-  python3 "{skill_dir}/scripts/hs_codes.py"   ...   # HS commodity code <-> name, offline
-  python3 "{skill_dir}/scripts/series_math.py" ...  # YoY/YTD/share/index/merge on saved results
+  python3 "{plugin_root}/scripts/term_chart.py" render ... # terminal ChartSpec preview
+  python3 "{plugin_root}/scripts/build_viz.py"  ...   # local visualization helper
+  python3 "{plugin_root}/scripts/comext_sql.py" ...   # SQL generator: Eurostat Comext (EU) trade
+  python3 "{plugin_root}/scripts/trade_sql.py"  ...   # SQL generator: US/China/India/Korea/Japan/Taiwan customs
+  python3 "{plugin_root}/scripts/hs_codes.py"   ...   # HS commodity code <-> name, offline
+  python3 "{plugin_root}/scripts/series_math.py" ...  # YoY/YTD/share/index/merge on saved results
   ```
 
-  Resolve `{skill_dir}` once to the absolute directory containing this
-  `SKILL.md`, then reuse it. Claude Code exposes that directory as
-  `${CLAUDE_SKILL_DIR}`; Codex provides this skill's absolute file path when
-  it makes the skill available. Never resolve these scripts from the shell's
-  current working directory or from a similarly named `scripts/` directory in
-  the user's project. Keep the quotes around the absolute path so installations
-  under a directory containing spaces still work.
+  Resolve `{plugin_root}` once, then reuse it. In Claude Code it is
+  `${CLAUDE_PLUGIN_ROOT}`. In Codex, start from the absolute path supplied for
+  this `SKILL.md`: the plugin root is two directories above the directory
+  containing this file (`skills/factiq/../..`). Never resolve these scripts
+  from the shell's current working directory or from a similarly named
+  `scripts/` directory in the user's project. Keep the quotes around the
+  absolute path so installations under a directory containing spaces still
+  work.
 
   **For any bilateral-trade question, generate the SQL instead of writing it.**
   `comext_sql.py` and `trade_sql.py` encode each schema's series-ID grammar,
@@ -162,7 +163,7 @@ objects. It never calls FactIQ. For `share_chart`, build the ChartSpec from data
 you already fetched, save it to JSON, publish it, then render it:
 
 ```bash
-python3 "{skill_dir}/scripts/term_chart.py" render --spec /tmp/factiq-chart.json --width 80 --charset ascii --color auto
+python3 "{plugin_root}/scripts/term_chart.py" render --spec /tmp/factiq-chart.json --width 80 --charset ascii --color auto
 ```
 
 For `share_report`, save the report object or the full `share_report` argument
@@ -170,7 +171,7 @@ object (`{"question": "...", "report": {...}}`) to JSON, publish it, then
 render the report's charts:
 
 ```bash
-python3 "{skill_dir}/scripts/term_chart.py" report --report /tmp/factiq-report.json --width 80 --charset ascii --color auto
+python3 "{plugin_root}/scripts/term_chart.py" report --report /tmp/factiq-report.json --width 80 --charset ascii --color auto
 ```
 
 Any time you create a shared chart or shared report, return both the share link
@@ -357,7 +358,7 @@ Steps:
    Right after each fetch, run (no retyping — it copies the payload from the
    transcript), giving each file a thread-unique name and a --match on a
    distinctive bit of your own SQL so a sibling agent's result can't be grabbed:
-   `python3 {skill_dir}/scripts/build_viz.py save --tool run_sql --match "<distinctive SQL fragment>" --out /tmp/factiq-raw/{thread_label}-<name>.json`
+   `python3 {plugin_root}/scripts/build_viz.py save --tool run_sql --match "<distinctive SQL fragment>" --out /tmp/factiq-raw/{thread_label}-<name>.json`
 4. Compute derived metrics (YoY, ratios, indices) yourself.
 5. Return your findings as a structured block:
 
@@ -420,7 +421,7 @@ Instructions:
    series_refs must list every series the step used.
 6. Call share_report with question, report, and model. After it succeeds, save
    the full share_report argument object to JSON and run:
-   `python3 {skill_dir}/scripts/term_chart.py report --report <json-file> --charset ascii --color never`
+   `python3 {plugin_root}/scripts/term_chart.py report --report <json-file> --charset ascii --color never`
 7. Return the share_url and paste the terminal previews into the reply inside a
    triple-backtick code block.
 ```
@@ -516,7 +517,7 @@ inject the data you already fetched, then render and iterate. Read
 `references/output/viz-guide.md` before starting — it covers technique selection, the
 data contract, and the legibility checklist.
 
-The tool is `{skill_dir}/scripts/build_viz.py` (local-only — it never calls
+The tool is `{plugin_root}/scripts/build_viz.py` (local-only — it never calls
 the API):
 
 | Command | Purpose |
@@ -536,7 +537,7 @@ look → fix**:
    mistyped digit ships a wrong chart with no error). Run one `save` per fetch,
    pinning the call with `--tool`/`--match`:
    ```bash
-   python3 "{skill_dir}/scripts/build_viz.py" save --match "korea_customs" --out /tmp/korea.json
+   python3 "{plugin_root}/scripts/build_viz.py" save --match "korea_customs" --out /tmp/korea.json
    ```
    The file holds the tool's own `{columns, results, …}` payload — see
    `references/output/viz-guide.md` (**Saving data without retyping**) for `--list`,

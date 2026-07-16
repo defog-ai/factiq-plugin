@@ -16,14 +16,14 @@ Subcommands:
            with a label and optionally rescaling values (unit alignment)
 
 Examples:
-  python3 "{skill_dir}/scripts/series_math.py" yoy --file cn_imports.json
-  python3 "{skill_dir}/scripts/series_math.py" share --file by_reporter.json --group-col reporter
-  python3 "{skill_dir}/scripts/series_math.py" index --file trend.json --base 2022-01 --group-col reporter
+  python3 "{plugin_root}/scripts/series_math.py" yoy --file cn_imports.json
+  python3 "{plugin_root}/scripts/series_math.py" share --file by_reporter.json --group-col reporter
+  python3 "{plugin_root}/scripts/series_math.py" index --file trend.json --base 2022-01 --group-col reporter
   # India is US$ Million, Korea US$ Thousand -> align both to US$ Million:
-  python3 "{skill_dir}/scripts/series_math.py" merge --input india=india.json \
+  python3 "{plugin_root}/scripts/series_math.py" merge --input india=india.json \
       --input korea=korea.json:0.001
 
-Here {skill_dir} is the absolute directory containing the FactIQ SKILL.md.
+Here {plugin_root} is the absolute directory containing the plugin manifests.
 """
 
 from __future__ import annotations

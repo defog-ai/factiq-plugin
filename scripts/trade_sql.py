@@ -23,14 +23,14 @@ Mirror caveat: each source is that country's own customs view; reporter
 views of the same flow differ on valuation, timing, and re-exports.
 
 Examples:
-  python3 "{skill_dir}/scripts/trade_sql.py" total --source census --partner China --flow imports \
+  python3 "{plugin_root}/scripts/trade_sql.py" total --source census --partner China --flow imports \
       --start 2025-01 --end 2025-12 --monthly
-  python3 "{skill_dir}/scripts/trade_sql.py" products --source india --partner "united states" \
+  python3 "{plugin_root}/scripts/trade_sql.py" products --source india --partner "united states" \
       --flow exports --start 2025-01 --end 2025-12 --group-by 2 --top 20
-  python3 "{skill_dir}/scripts/trade_sql.py" trend --source korea --partner cn --flow exports \
+  python3 "{plugin_root}/scripts/trade_sql.py" trend --source korea --partner cn --flow exports \
       --hs 854232 --start 2020-01 --end 2025-12
 
-Here {skill_dir} is the absolute directory containing the FactIQ SKILL.md.
+Here {plugin_root} is the absolute directory containing the plugin manifests.
 Label the HS codes a products query returns with its bundled hs_codes.py.
 """
 

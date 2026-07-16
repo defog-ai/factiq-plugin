@@ -19,16 +19,16 @@ ID grammar it encodes:
     together. All-goods totals use the exact `cn6_total` product token.
 
 Examples:
-  python3 "{skill_dir}/scripts/comext_sql.py" total --reporters all --partner cn --flow imports \
+  python3 "{plugin_root}/scripts/comext_sql.py" total --reporters all --partner cn --flow imports \
       --start 2025-01 --end 2025-12
-  python3 "{skill_dir}/scripts/comext_sql.py" total --reporters de,fr,nl --partner us --flow exports \
+  python3 "{plugin_root}/scripts/comext_sql.py" total --reporters de,fr,nl --partner us --flow exports \
       --start 2024-01 --end 2025-12 --monthly
-  python3 "{skill_dir}/scripts/comext_sql.py" products --reporters all --partner cn --flow imports \
+  python3 "{plugin_root}/scripts/comext_sql.py" products --reporters all --partner cn --flow imports \
       --start 2025-01 --end 2025-12 --group-by 4 --top 25
-  python3 "{skill_dir}/scripts/comext_sql.py" trend --reporters de --partner cn --flow imports \
+  python3 "{plugin_root}/scripts/comext_sql.py" trend --reporters de --partner cn --flow imports \
       --hs 8507 --start 2020-01 --end 2025-12
 
-Here {skill_dir} is the absolute directory containing the FactIQ SKILL.md.
+Here {plugin_root} is the absolute directory containing the plugin manifests.
 Label the HS codes a products/trend query returns with its bundled hs_codes.py.
 """
 

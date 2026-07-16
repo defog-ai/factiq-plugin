@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS = ROOT / "skills" / "factiq" / "scripts"
+SCRIPTS = ROOT / "scripts"
 
 
 def run_script(name, *args):
