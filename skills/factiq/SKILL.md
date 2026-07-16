@@ -4,8 +4,9 @@ description: >
   Answer economic and financial data questions with real data from FactIQ
   (worlddb): US indicators (BLS employment/CPI, BEA GDP, Census trade, EIA
   energy, USDA ERS, BTS transport), international data (China NBS, China
-  customs, India MOSPI/RBI/trade, Singapore, IMF, World Bank), stock quotes
-  and fundamentals, commodities/forex, and earnings-call transcripts. Use
+  customs, India MOSPI/RBI/trade, EU Comext trade, Singapore, IMF, World Bank),
+  stock quotes and fundamentals, commodities/forex, and earnings-call
+  transcripts. Use
   when the user asks about unemployment, inflation, GDP, trade flows, energy,
   wages, markets,
   or wants a shareable economic chart or map (country choropleths,
@@ -224,6 +225,12 @@ local visualizations**). Local-only; never calls the API.
    prefer short stems like `rare`, not `rare earth`) or exploration SQL
    (`run_sql` with `explore=true`) on the `series` and `dimensions` tables.
    For multi-source stories, actually fetch data from 2+ schemas.
+
+   Eurostat Comext is the exception: country schemas contain millions of
+   series, so do not explore their `series` or `dimensions` tables by text or
+   dimension value. Read the **Eurostat Comext country schemas** section in
+   `references/data/sql-guide.md`; it uses the small product lookup table and
+   exact indexed series IDs.
 
    **Domain report patterns.** If the question is broad and analytical —
    policy, trade, revenue, investment analysis, "what's driving X" — read
@@ -575,7 +582,9 @@ payload from the transcript so you never retype the rows.
 - **SQL timeout** — statements are capped at 30s. Filter on indexed columns
   (`series_id`, `dataset_code`) instead of scanning titles, and never
   pattern-match `series_id` on `data_points` — resolve ids from `series` first
-  (see the pitfall in `references/data/sql-guide.md`).
+  (see the pitfall in `references/data/sql-guide.md`). For `eu_comext_*`, do
+  not retry a dimension scan; use `eu_comext_lookup.product_codes` and exact
+  IDs as described in the Comext section of that guide.
 - **Publishing validation error** — `share_chart` / `share_report` validate the
   payload against FactIQ's real chart schemas and return a tool error naming the
   failing field paths (e.g. `sections[1].charts[0].x_column`). Fix the named

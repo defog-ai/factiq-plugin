@@ -68,8 +68,11 @@ table stays readable.
    so do not try to join India and Korea, China and US, etc. in one SQL call.
    Fetch comparable aggregates from each reporter, then normalize units and
    compare locally.
-4. Use the `dimensions` table to filter partner, flow, commodity, and HS level.
-   Do not parse series IDs unless dimension filters are unavailable.
+4. For most trade schemas, use `dimensions` to filter partner, flow, commodity,
+   and HS level. Eurostat Comext is the exception: never scan its `dimensions`
+   table by value. Follow the dedicated Comext workflow in
+   `references/data/sql-guide.md`, which searches the product lookup and builds
+   exact series IDs.
 5. Use exactly one HS level per table. Use HS-6 for cross-country comparison.
    Use national 8/10-digit detail only for within-reporter detail, and never
    sum national-detail rows together with HS-6 rows.
@@ -96,6 +99,9 @@ Useful India-South Korea substitutions:
 The templates below assume a trade schema with dimensions named `partner`,
 `flow`, `commodity`, `hs_level`, and `reporter` (the structure used by
 `india_trade`, `korea_trade`, `china_customs`, and similar customs schemas).
+They do not apply to `eu_comext_*`; use the indexed Comext template in
+`references/data/sql-guide.md` instead.
+
 Replace:
 
 - `<dataset>` with the dataset code, often the same as the schema.
