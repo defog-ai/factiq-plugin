@@ -19,6 +19,7 @@ import argparse
 import gzip
 import json
 import os
+import re
 import sys
 
 DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "hs_names.json.gz")
@@ -55,14 +56,56 @@ def lookup(names: dict[str, dict[str, str]], code: str) -> None:
     print(f"{code}\t{name}")
 
 
+def _stem(token: str) -> str:
+    """Fold trivial plurals so 'battery' meets 'batteries'. Applied to both
+    sides identically — consistency matters more than linguistic accuracy."""
+    if token.endswith("ies") and len(token) > 4:
+        return token[:-3] + "y"
+    if token.endswith("s") and len(token) > 3 and not token.endswith(("ss", "us", "is")):
+        return token[:-1]
+    return token
+
+
+def _tokens(text: str) -> set[str]:
+    return {_stem(t) for t in re.split(r"[^a-z0-9]+", text.lower()) if t}
+
+
 def search(names: dict[str, dict[str, str]], term: str, levels: list[str], limit: int) -> None:
     term_l = term.lower()
+    # Pass 1: literal substring — precise when the official wording is known.
     hits = [
         (lvl, code, name)
         for lvl in levels
         for code, name in sorted(names[lvl].items())
         if term_l in name.lower()
     ]
+    # Pass 2: token match — HS wording rarely matches everyday phrasing
+    # ("lithium ion battery" is officially "Electric accumulators;
+    # lithium-ion"), so rank by how many query words a name contains and
+    # keep the best-scoring tier.
+    if not hits:
+        want = _tokens(term)
+        if not want:
+            fail(f"no searchable words in '{term}'", code=2)
+        rows = [(lvl, code, name, _tokens(name)) for lvl in levels for code, name in sorted(names[lvl].items())]
+        # document frequency per query token: a match on a rare word
+        # ("memories") is worth more than one on a common word ("chips")
+        df = {t: sum(1 for *_, toks in rows if t in toks) or 1 for t in want}
+        scored = []
+        for lvl, code, name, toks in rows:
+            matched = want & toks
+            if matched:
+                scored.append((len(matched), sum(1.0 / df[t] for t in matched), lvl, code, name))
+        if not scored:
+            fail(f"no HS names match '{term}' — try a shorter stem", code=2)
+        scored.sort(key=lambda r: (-r[0], -r[1], r[2], r[3]))
+        best = scored[0][0]
+        hits = [(lvl, code, name) for _, _, lvl, code, name in scored]
+        if best < len(want):
+            print(
+                f"(no name contains all {len(want)} words — ranked by matches, rarest words first)",
+                file=sys.stderr,
+            )
     if not hits:
         fail(f"no HS names contain '{term}' — try a shorter stem", code=2)
     for lvl, code, name in hits[:limit]:
@@ -78,7 +121,7 @@ def main() -> None:
     parser.add_argument("codes", nargs="*", help="HS codes to name (2/4/6 digits each)")
     parser.add_argument("--search", help="find codes whose name contains this text")
     parser.add_argument("--level", choices=["2", "4", "6"], help="restrict --search to one level")
-    parser.add_argument("--limit", type=int, default=40, help="max --search rows (default 40)")
+    parser.add_argument("--limit", type=int, default=15, help="max --search rows (default 15)")
     args = parser.parse_args()
 
     if not args.codes and not args.search:
