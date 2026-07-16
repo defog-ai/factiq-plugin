@@ -179,6 +179,7 @@ recipes live in [`references/data/sql-guide.md`](references/data/sql-guide.md).
 | China | NBS macro indicators, GACC customs (HS-level trade) |
 | India | MOSPI (CPI, WPI, IIP, GDP), RBI (banking, rates, forex), DGCI&S trade (HS-level), city traffic |
 | South Korea | KCS customs (HS-level trade) |
+| European Union | Eurostat Comext monthly trade for all 27 member-state reporters, by CN8 product and partner country |
 | Global | IMF, World Bank, Singapore SingStat, live market data (quotes, fundamentals, FX, commodities) |
 
 `references/data/schemas.md` has the static overview; the `get_data_catalog` tool

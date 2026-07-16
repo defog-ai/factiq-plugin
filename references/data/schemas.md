@@ -41,6 +41,20 @@ file. Some schemas are admin-only and simply won't appear in your
 |---|---|---|
 | `korea_trade` | Korea Customs Service (KCS) | Monthly imports/exports by HS commodity and partner (6-digit international and 10-digit national levels — never sum across levels; values are in US$ thousand and weight is stored as separate kg series) |
 
+## European Union
+
+| Schema | Source | Coverage |
+|---|---|---|
+| `eu_comext_<iso2>` | Eurostat Comext | One schema per EU member-state reporter; monthly imports and exports by partner and detailed CN8 product, with trade value in euros and separate weight or supplementary-quantity series |
+
+Use the reporter's lowercase ISO2 code: `eu_comext_de` for Germany,
+`eu_comext_fr` for France, and `eu_comext_nl` for the Netherlands. All 27
+reporters are available: `at`, `be`, `bg`, `hr`, `cy`, `cz`, `dk`, `ee`, `fi`,
+`fr`, `de`, `gr`, `hu`, `ie`, `it`, `lv`, `lt`, `lu`, `mt`, `nl`, `pl`, `pt`,
+`ro`, `sk`, `si`, `es`, and `se`. There is no `eu_comext` data schema. See the
+Comext section of `sql-guide.md` before querying; its large country tables need
+exact series IDs rather than dimension searches.
+
 ## Global / other
 
 | Schema | Source | Coverage |
@@ -56,8 +70,8 @@ file. Some schemas are admin-only and simply won't appear in your
 - Energy anything → `eia`
 - India macro → check BOTH `mospi` and `rbi`
 - Trade-war / commodity-flow stories → `census` + `china_customs` +
-  `india_trade` + `korea_trade` cover the same flows from each country's own
-  books when those reporters are in scope
+  `india_trade` + `korea_trade` + the relevant `eu_comext_<iso2>` schemas cover
+  the same flows from each country's own records when those reporters are in scope
 - Cross-country comparisons → `imf` / `worldbank`
 - Company-specific: consolidated quotes/fundamentals → `get_market_data` tool (not SQL); segment/product/geography detail, forward guidance, or operating KPIs (ARR, RevPAR, ...) → `sec` schema via `run_sql`; what management said live on a call → `search_earnings_transcripts` tool (not SQL)
 
@@ -66,3 +80,7 @@ HS trade schemas (`us_census_hs` in census, `china_customs`, `india_trade`,
 level and never sum across levels. Some reporters also store value and physical
 quantity/weight as separate series; filter value series explicitly for value
 reports.
+
+Comext is the exception to the normal HS discovery method: do not filter its
+`dimensions` table by value. Search `eu_comext_lookup.product_codes`, construct
+exact series IDs, and query one reporter schema at a time.

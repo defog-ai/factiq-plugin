@@ -132,8 +132,9 @@ HS product drivers.
 
 The core guardrails:
 
-- Filter with `dimensions` (`partner`, `flow`, `commodity`, `hs_level`) instead
-  of parsing series IDs.
+- For trade schemas other than Comext, filter with `dimensions` (`partner`,
+  `flow`, `commodity`, `hs_level`) instead of parsing series IDs. Comext uses
+  the indexed workflow below.
 - Use exactly one HS level in an aggregation. HS-6 is the default for
   cross-country comparison; national 8/10-digit lines are finer detail and must
   not be summed with HS-6 rows.
@@ -145,6 +146,80 @@ The core guardrails:
 - Query each reporter schema separately, then compare in local computation.
   Mirror statistics differ because of timing, valuation, re-exports, and
   revisions; state the reporter view explicitly.
+
+### Eurostat Comext country schemas
+
+Comext uses one physical schema per EU reporter, named
+`eu_comext_<lowercase ISO2>`: for example, `eu_comext_de`, `eu_comext_fr`,
+and `eu_comext_nl`. There is no `eu_comext` data schema. Each country catalog
+is large enough that title searches and dimension-value scans can reach the
+30-second SQL limit.
+
+Use these rules:
+
+- Never search or filter Comext's `dimensions` table by dimension values.
+- Search the shared `eu_comext_lookup.product_codes` table by `product_code`,
+  `product_name`, `hs2_code`, `hs4_code`, or `hs6_code`.
+  It is a complete product-code lookup, including historical codes and their
+  first and last observed dates.
+- Build exact series IDs and join them to `data_points`, whose `series_id`
+  index makes the fetch fast. The detailed ID shape is
+  `eu_comext_{M|X}_{reporter}_{partner}_{te|tm}_p1_cn8_{product_code}_{eur|kg|su}`.
+  `M` means imports and `X` exports. Reporter and partner are lowercase ISO2
+  codes. The stored trade token is `te` for extra-EU trade and `tm` for
+  member-state trade.
+- Use `_eur` for trade value, `_kg` for weight, and `_su` for supplementary
+  quantity. Never sum these metrics together.
+- For all-goods totals, use the exact `cn6_total` series instead of summing
+  every CN8 product.
+- Run one already-aggregated query per reporter schema, then combine the small
+  results locally. Do not join or union the large country tables.
+
+To inspect product mappings, qualify the shared table from any country query:
+
+```sql
+SELECT product_code, product_name, hs2_code, hs4_code, hs6_code,
+       first_observed, last_observed
+FROM eu_comext_lookup.product_codes
+WHERE product_name ILIKE '%textile%'
+ORDER BY product_code
+LIMIT 50;
+```
+
+For a broad category, keep the lookup and aggregation in the same SQL call so
+the 50-row tool limit does not truncate the CN8 code list. This tested example
+returns monthly German-reported textile imports from China in 2025. Run it
+with `schema="eu_comext_de"`:
+
+```sql
+SELECT dp.time::date AS month,
+       SUM(dp.value) AS value_eur
+FROM eu_comext_lookup.product_codes p
+JOIN data_points dp
+  ON dp.series_id =
+     'eu_comext_M_de_cn_te_p1_cn8_' || lower(p.product_code) || '_eur'
+WHERE p.hs2_code BETWEEN '50' AND '63'
+  AND p.is_numeric_cn8
+  AND p.first_observed <= DATE '2025-12-01'
+  AND p.last_observed >= DATE '2025-01-01'
+  AND dp.time >= DATE '2025-01-01'
+  AND dp.time < DATE '2026-01-01'
+GROUP BY dp.time
+ORDER BY dp.time;
+```
+
+Replace the reporter, partner, flow, trade token, dates, and HS grouping for
+the question. For one named CN8 product, construct its exact ID directly. For
+all goods, query the total series:
+
+```sql
+SELECT time::date AS month, value AS value_eur
+FROM data_points
+WHERE series_id = 'eu_comext_M_de_cn_te_p1_cn6_total_eur'
+  AND time >= DATE '2025-01-01'
+  AND time < DATE '2026-01-01'
+ORDER BY time;
+```
 
 ## Pivoting to wide format
 
