@@ -130,6 +130,14 @@ can't find the national aggregate, say so rather than substituting.
 
 ## HS trade datasets
 
+**Don't hand-write bilateral-trade SQL — generate it.** The plugin bundles
+stdlib-only generators that encode every schema's ID grammar, partner codes,
+units, and HS-level rules (run `--help` for subcommands):
+`scripts/trade_sql.py` covers the six national customs schemas (census
+`us_census_hs`, `china_customs`, `india_trade`, `korea_trade`, `japan_trade`,
+`taiwan_trade`), `scripts/comext_sql.py` covers the 27 Eurostat Comext
+schemas, and `scripts/hs_codes.py` resolves HS codes <-> names offline.
+
 For broad bilateral merchandise-trade questions, use
 `references/report-patterns/bilateral-trade.md`; it has the report trigger and ready SQL
 templates for monthly totals, latest-month YoY, YTD YoY, annual totals, and top
@@ -182,8 +190,8 @@ Use these rules:
   index makes the fetch fast. The detailed ID shape is
   `eu_comext_{M|X}_{reporter}_{partner}_{te|tm}_p1_cn8_{product_code}_{eur|kg|su}`.
   `M` means imports and `X` exports. Reporter and partner are lowercase ISO2
-  codes. The stored trade token is `te` for extra-EU trade and `tm` for
-  member-state trade.
+  codes. The stored trade token is `te` when the partner is outside the EU
+  and `ti` when the partner is another EU member (intra-EU trade).
 - Use `_eur` for trade value, `_kg` for weight, and `_su` for supplementary
   quantity. Never sum these metrics together.
 - For all-goods totals, use the exact `cn6_total` series instead of summing

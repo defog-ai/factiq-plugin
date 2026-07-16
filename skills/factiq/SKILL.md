@@ -81,10 +81,22 @@ Five output modes:
   ```bash
   python3 scripts/term_chart.py render ... # terminal ChartSpec preview
   python3 scripts/build_viz.py  ...   # path relative to this skill dir
+  python3 scripts/comext_sql.py ...   # SQL generator: Eurostat Comext (EU) trade
+  python3 scripts/trade_sql.py  ...   # SQL generator: US/China/India/Korea/Japan/Taiwan customs
+  python3 scripts/hs_codes.py   ...   # HS commodity code <-> name, offline
+  python3 scripts/series_math.py ...  # YoY/YTD/share/index/merge on saved results
   ```
 
   Shell working directory resets between calls — resolve the script's absolute
   path once (from this skill's directory) and reuse it.
+
+  **For any bilateral-trade question, generate the SQL instead of writing it.**
+  `comext_sql.py` and `trade_sql.py` encode each schema's series-ID grammar,
+  partner-code system, units, and HS-level rules, so the query is correct by
+  construction — run `--help` on either for the subcommands (total / products /
+  trend). Label the HS codes a ranking returns with `hs_codes.py` (zero server
+  calls), and do growth/share arithmetic with `series_math.py` on results saved
+  via `build_viz.py save` rather than in your own output.
 
 ## Setup
 

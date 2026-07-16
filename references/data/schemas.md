@@ -24,7 +24,7 @@ file. Some schemas are admin-only and simply won't appear in your
 | Schema | Source | Coverage |
 |---|---|---|
 | `china` | National Bureau of Statistics | Macro indicators: GDP, industrial production, fixed-asset investment, prices |
-| `china_customs` | General Administration of Customs (GACC) | Monthly imports/exports by 8-digit HS line and partner country (incl. rare earths). Data not yet loaded (listed under `schemas_without_data` in `get_data_catalog`) — for China–US trade use the `us_census_hs` mirror in `census` (US imports from China ≈ Chinese exports to the US) |
+| `china_customs` | General Administration of Customs (GACC) | Monthly imports/exports by HS commodity and partner (6- and 8-digit levels — never sum across levels; value in US$, quantities as separate `_qty` series). A separate `china_customs_prelim` dataset carries GACC's headline preliminary totals in different units (mostly CNY 100 million) — never mix it with the per-HS US$ data |
 
 ## India
 
@@ -40,6 +40,18 @@ file. Some schemas are admin-only and simply won't appear in your
 | Schema | Source | Coverage |
 |---|---|---|
 | `korea_trade` | Korea Customs Service (KCS) | Monthly imports/exports by HS commodity and partner (6-digit international and 10-digit national levels — never sum across levels; values are in US$ thousand and weight is stored as separate kg series) |
+
+## Japan
+
+| Schema | Source | Coverage |
+|---|---|---|
+| `japan_trade` | Japan Customs / Ministry of Finance | Monthly imports/exports by 9-digit HS line and partner country (no 6-digit level — group by the first 6 digits for international comparison; value in ¥ thousand, quantities as separate `_qty`/`_qty2` series with product-specific units) |
+
+## Taiwan
+
+| Schema | Source | Coverage |
+|---|---|---|
+| `taiwan_trade` | International Trade Administration (ITA), Ministry of Economic Affairs | Monthly imports/exports by commodity (6-digit international HS and 11-digit national CCC lines — never sum across levels; value in US$, no quantity series) |
 
 ## European Union
 
