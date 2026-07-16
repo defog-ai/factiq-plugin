@@ -165,14 +165,51 @@ def load_partners(source: str) -> tuple[dict[str, str], dict[str, str]]:
             for code, name in mapping.items()
         ):
             fail(f"bundled partner map at {path} has an invalid shape")
+        missing_alias_codes = sorted(set(aliases.values()) - set(partners))
+        if missing_alias_codes:
+            fail(
+                f"bundled partner map at {path} has aliases for unknown code(s) "
+                f"{missing_alias_codes}"
+            )
         return partners, aliases
     except (OSError, UnicodeError, json.JSONDecodeError, KeyError, TypeError) as exc:
         fail(f"cannot read bundled partner map at {path}: {exc}")
     raise AssertionError  # unreachable
 
 
-def resolve_partner(source: str, text: str) -> tuple[str, str]:
-    """Resolve a partner code or name to (code, name) for this source."""
+def normalize_partner_name(text: str) -> str:
+    """Fold punctuation and accidental spacing for partner-name matching."""
+    return "".join(char for char in text.casefold() if char.isalnum())
+
+
+def same_name_codes(partners: dict[str, str], name: str) -> list[str]:
+    """Return every code whose display name denotes the same partner."""
+    normalized_name = normalize_partner_name(name)
+    return [
+        code
+        for code, candidate in partners.items()
+        if normalize_partner_name(candidate) == normalized_name
+    ]
+
+
+def grouped_name_hits(
+    hits: list[tuple[str, str]],
+) -> list[list[tuple[str, str]]]:
+    """Group code hits that are historical versions of the same partner."""
+    grouped: dict[str, list[tuple[str, str]]] = {}
+    for code, name in hits:
+        grouped.setdefault(normalize_partner_name(name), []).append((code, name))
+    return list(grouped.values())
+
+
+def resolve_partner(source: str, text: str) -> tuple[list[str], str]:
+    """Resolve a partner code or name to (codes, display name).
+
+    A few China partner codes changed in January 2023. The bundled map keeps
+    both codes under the same name, so name-based queries must include both to
+    work across the boundary. Passing an exact code still selects only that
+    code.
+    """
     cfg = SOURCES[source]
     query = text.strip()
     if not query:
@@ -192,26 +229,55 @@ def resolve_partner(source: str, text: str) -> tuple[str, str]:
             )
         query = cfg["world_partner"]
     partners, aliases = load_partners(source)
-    # 1. curated alias ("united states", "south korea", "uae", ...)
-    alias_code = aliases.get(query.lower())
-    if alias_code is not None and alias_code in partners:
-        return alias_code, partners[alias_code]
-    # 2. exact code (case-insensitive)
+    # 1. exact code (case-insensitive). Keep this ahead of aliases so an
+    # explicit historical code always selects only that code.
     for code, name in partners.items():
         if code.lower() == query.lower():
-            return code, name
-    # 3. exact name, then unique substring (case-insensitive)
-    exact = [(c, n) for c, n in partners.items() if n.lower() == query.lower()]
-    if len(exact) == 1:
-        return exact[0]
-    hits = [(c, n) for c, n in partners.items() if query.lower() in n.lower()]
-    if len(hits) == 1:
-        return hits[0]
+            return [code], name
+    normalized_query = normalize_partner_name(query)
+    if not normalized_query:
+        fail("--partner must contain at least one letter or number")
+    # 2. curated alias ("united states", "south korea", "uae", ...).
+    # Normalize aliases too, so "U.S." and repeated spaces work as expected.
+    alias_matches = {
+        code
+        for alias, code in aliases.items()
+        if normalize_partner_name(alias) == normalized_query
+    }
+    if len(alias_matches) > 1:
+        fail(f"bundled aliases for '{query}' resolve to multiple partner codes")
+    if alias_matches:
+        alias_code = next(iter(alias_matches))
+        alias_name = partners[alias_code]
+        return same_name_codes(partners, alias_name), alias_name
+    # 3. exact normalized name. Multiple codes with the same name are
+    # historical versions of one partner and must all be queried.
+    exact = [
+        (code, name)
+        for code, name in partners.items()
+        if normalize_partner_name(name) == normalized_query
+    ]
+    if exact:
+        return [code for code, _ in exact], exact[0][1]
+    # 4. unique normalized-name substring. Count names rather than codes:
+    # two historical codes for Georgia are one partner match, not ambiguity.
+    hits = [
+        (code, name)
+        for code, name in partners.items()
+        if normalized_query in normalize_partner_name(name)
+    ]
     if not hits:
         fail(f"no partner in '{source}' matches '{text}' — try a shorter name fragment")
-    listing = "; ".join(f"{c}={n}" for c, n in hits[:10])
+    grouped_hits = grouped_name_hits(hits)
+    if len(grouped_hits) == 1:
+        return [code for code, _ in grouped_hits[0]], grouped_hits[0][0][1]
+    listing = "; ".join(
+        f"{','.join(code for code, _ in group)}={group[0][1]}"
+        for group in grouped_hits[:10]
+    )
     fail(
-        f"'{text}' is ambiguous in '{source}' ({len(hits)} matches): {listing}", code=2
+        f"'{text}' is ambiguous in '{source}' ({len(grouped_hits)} matches): {listing}",
+        code=2,
     )
     raise AssertionError  # unreachable
 
@@ -244,20 +310,42 @@ def value_filter(source: str) -> str:
     return f"s.measurement_units = '{SOURCES[source]['value_unit']}'"
 
 
-def dim_join(alias: str, dim_type: str, code: str) -> str:
+def sql_string(text: str) -> str:
+    return "'" + text.replace("'", "''") + "'"
+
+
+def add_partner_code_note(note: str, partner_codes: list[str]) -> str:
+    if len(partner_codes) == 1:
+        return note
+    codes = ", ".join(partner_codes)
+    return f"{note}; combined historical partner codes {codes}"
+
+
+def dim_join(alias: str, dim_type: str, codes: str | list[str]) -> str:
+    code_list = [codes] if isinstance(codes, str) else codes
+    if len(code_list) == 1:
+        code_condition = f"{alias}.dimension_code = {sql_string(code_list[0])}"
+    else:
+        code_condition = (
+            f"{alias}.dimension_code IN ("
+            + ", ".join(sql_string(code) for code in code_list)
+            + ")"
+        )
     return (
         f"JOIN dimensions {alias} ON {alias}.series_id = s.series_id\n"
-        f"  AND {alias}.dimension_type = '{dim_type}' AND {alias}.dimension_code = '{code}'"
+        f"  AND {alias}.dimension_type = {sql_string(dim_type)} AND {code_condition}"
     )
 
 
-def base_joins(source: str, flow: str, level: int, partner_code: str) -> str:
+def base_joins(
+    source: str, flow: str, level: int, partner_codes: list[str]
+) -> tuple[str, list[str]]:
     cfg = SOURCES[source]
     parts = [
         "FROM series s",
         dim_join("f", "flow", flow_code(flow)),
         dim_join("l", "hs_level", str(level)),
-        dim_join("pa", "partner", partner_code.replace("'", "''")),
+        dim_join("pa", "partner", partner_codes),
         "JOIN data_points dp ON dp.series_id = s.series_id",
     ]
     where = [value_filter(source)]
@@ -295,11 +383,11 @@ def header(
 
 def sql_total(args: argparse.Namespace) -> str:
     source = args.source
-    partner_code, partner_name = resolve_partner(source, args.partner)
+    partner_codes, partner_name = resolve_partner(source, args.partner)
     level = resolve_level(source, args.level)
     lo, hi = date_bounds(args.start, args.end)
 
-    joins, where = base_joins(source, args.flow, level, partner_code)
+    joins, where = base_joins(source, args.flow, level, partner_codes)
     where.append(f"dp.time >= DATE '{lo}' AND dp.time < DATE '{hi}'")
     if args.monthly:
         select, group = (
@@ -310,13 +398,16 @@ def sql_total(args: argparse.Namespace) -> str:
         select, group = "SUM(dp.value) AS value", ""
     conditions = "\n  AND ".join(where)
     body = f"SELECT {select}\n{joins}\nWHERE {conditions}{group};"
-    note = f"all-goods total = sum over every HS-{level} line for this partner"
+    note = add_partner_code_note(
+        f"all-goods total = sum over every HS-{level} line for this partner",
+        partner_codes,
+    )
     return header(source, args, partner_name, level, note) + "\n" + body
 
 
 def sql_products(args: argparse.Namespace) -> str:
     source = args.source
-    partner_code, partner_name = resolve_partner(source, args.partner)
+    partner_codes, partner_name = resolve_partner(source, args.partner)
     level = resolve_level(source, args.level)
     group_digits = int(args.group_by)
     if group_digits > level:
@@ -325,7 +416,7 @@ def sql_products(args: argparse.Namespace) -> str:
         )
     lo, hi = date_bounds(args.start, args.end)
 
-    joins, where = base_joins(source, args.flow, level, partner_code)
+    joins, where = base_joins(source, args.flow, level, partner_codes)
     joins += "\n" + (
         "JOIN dimensions c ON c.series_id = s.series_id\n"
         "  AND c.dimension_type = 'commodity'"
@@ -343,14 +434,17 @@ def sql_products(args: argparse.Namespace) -> str:
         if group_digits in (2, 4, 6)
         else "national-line names live in dimensions.dimension_name (dimension_type='commodity')"
     )
-    note = f"top products by first {group_digits} HS digits; {label_hint}"
+    note = add_partner_code_note(
+        f"top products by first {group_digits} HS digits; {label_hint}",
+        partner_codes,
+    )
     return header(source, args, partner_name, level, note) + "\n" + body
 
 
 def sql_trend(args: argparse.Namespace) -> str:
     source = args.source
     cfg = SOURCES[source]
-    partner_code, partner_name = resolve_partner(source, args.partner)
+    partner_codes, partner_name = resolve_partner(source, args.partner)
     code = args.hs.strip()
     if re.fullmatch(r"[0-9]+", code, flags=re.ASCII) is None:
         fail(f"--hs must be an HS code, got '{args.hs}'")
@@ -363,17 +457,33 @@ def sql_trend(args: argparse.Namespace) -> str:
     ):
         # Full-length code at a stored level: the series ID is constructible.
         level = len(code)
-        series_id = (
+        series_ids = [
             f"{cfg['prefix']}_{flow_code(args.flow)}_{level}d_{code}_{partner_code}"
-        )
-        body = (
-            f"SELECT time::date AS month, value\n"
-            f"FROM data_points\n"
-            f"WHERE series_id = '{series_id}'\n"
-            f"  AND time >= DATE '{lo}' AND time < DATE '{hi}'\n"
-            f"ORDER BY time;"
-        )
-        note = f"exact series: {series_id}"
+            for partner_code in partner_codes
+        ]
+        if len(series_ids) == 1:
+            body = (
+                f"SELECT time::date AS month, value\n"
+                f"FROM data_points\n"
+                f"WHERE series_id = {sql_string(series_ids[0])}\n"
+                f"  AND time >= DATE '{lo}' AND time < DATE '{hi}'\n"
+                f"ORDER BY time;"
+            )
+            note = f"exact series: {series_ids[0]}"
+        else:
+            id_list = ",\n    ".join(sql_string(series_id) for series_id in series_ids)
+            body = (
+                f"SELECT time::date AS month, SUM(value) AS value\n"
+                f"FROM data_points\n"
+                f"WHERE series_id IN (\n    {id_list})\n"
+                f"  AND time >= DATE '{lo}' AND time < DATE '{hi}'\n"
+                f"GROUP BY 1\n"
+                f"ORDER BY 1;"
+            )
+            note = (
+                f"{len(series_ids)} historical partner-code series combined: "
+                + ", ".join(series_ids)
+            )
         return header(source, args, partner_name, level, note) + "\n" + body
 
     if args.metric != "value":
@@ -392,9 +502,10 @@ def sql_trend(args: argparse.Namespace) -> str:
             )
         ids = [
             f"{cfg['prefix']}_{flow_code(args.flow)}_{level}d_{code}_{partner_code}_{sfx}"
+            for partner_code in partner_codes
             for sfx in cfg["qty_suffixes"]
         ]
-        id_list = ",\n    ".join(f"'{i}'" for i in ids)
+        id_list = ",\n    ".join(sql_string(series_id) for series_id in ids)
         body = (
             f"SELECT s.series_id, s.measurement_units, dp.time::date AS month, dp.value\n"
             f"FROM series s JOIN data_points dp ON dp.series_id = s.series_id\n"
@@ -402,9 +513,10 @@ def sql_trend(args: argparse.Namespace) -> str:
             f"  AND dp.time >= DATE '{lo}' AND dp.time < DATE '{hi}'\n"
             f"ORDER BY s.series_id, dp.time;"
         )
-        note = (
+        note = add_partner_code_note(
             "quantity units are product-specific — read measurement_units off "
-            "each row and NEVER sum quantities across products"
+            "each row and NEVER sum quantities across products",
+            partner_codes,
         )
         return header(source, args, partner_name, level, note) + "\n" + body
 
@@ -421,7 +533,7 @@ def sql_trend(args: argparse.Namespace) -> str:
             "and not shorter than the aggregation level — pass a full-length code, "
             f"or a 2/4/6-digit group with --level {level}"
         )
-    joins, where = base_joins(source, args.flow, level, partner_code)
+    joins, where = base_joins(source, args.flow, level, partner_codes)
     joins += "\n" + (
         "JOIN dimensions c ON c.series_id = s.series_id\n"
         f"  AND c.dimension_type = 'commodity' AND c.dimension_code LIKE '{code}%'"
@@ -434,7 +546,9 @@ def sql_trend(args: argparse.Namespace) -> str:
         f"WHERE {conditions}\n"
         f"GROUP BY 1\nORDER BY 1;"
     )
-    note = f"HS group {code}* summed over HS-{level} lines"
+    note = add_partner_code_note(
+        f"HS group {code}* summed over HS-{level} lines", partner_codes
+    )
     return header(source, args, partner_name, level, note) + "\n" + body
 
 

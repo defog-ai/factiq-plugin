@@ -62,7 +62,7 @@ def load_names() -> dict[str, dict[str, str]]:
     return data
 
 
-def lookup(names: dict[str, dict[str, str]], code: str) -> None:
+def lookup(names: dict[str, dict[str, str]], code: str) -> str:
     code = code.strip()
     level = str(len(code))
     if level not in names or re.fullmatch(r"[0-9]+", code, flags=re.ASCII) is None:
@@ -76,7 +76,7 @@ def lookup(names: dict[str, dict[str, str]], code: str) -> None:
     name = names[level].get(code)
     if name is None:
         fail(f"HS code '{code}' not found in the HS-2022 nomenclature")
-    print(f"{code}\t{name}")
+    return f"{code}\t{name}"
 
 
 def _stem(token: str) -> str:
@@ -135,7 +135,11 @@ def search(
             fail(f"no HS names match '{term}' — try a shorter stem", code=2)
         scored.sort(key=lambda r: (-r[0], -r[1], r[2], r[3]))
         best = scored[0][0]
-        hits = [(lvl, code, name) for _, _, lvl, code, name in scored]
+        hits = [
+            (lvl, code, name)
+            for matched_count, _, lvl, code, name in scored
+            if matched_count == best
+        ]
         if best < len(want):
             print(
                 f"(no name contains all {len(want)} words — ranked by matches, rarest words first)",
@@ -164,23 +168,29 @@ def main() -> None:
     parser.add_argument(
         "--limit",
         type=positive_int,
-        default=15,
         help="maximum search rows, at least 1 (default 15)",
     )
     args = parser.parse_args()
 
     if not args.codes and args.search is None:
         parser.error("pass HS codes to name, or --search <term>")
+    if args.codes and args.search is not None:
+        parser.error("pass either HS codes or --search, not both")
+    if args.search is None and (args.level is not None or args.limit is not None):
+        parser.error("--level and --limit can only be used with --search")
 
     names = load_names()
-    for code in args.codes:
-        lookup(names, code)
-    if args.search is not None:
+    if args.codes:
+        # Validate every code before emitting anything, so a bad later argument
+        # cannot leave a caller with a partial result that looks successful.
+        lines = [lookup(names, code) for code in args.codes]
+        print("\n".join(lines))
+    else:
         search(
             names,
             args.search,
             [args.level] if args.level else ["2", "4", "6"],
-            args.limit,
+            args.limit or 15,
         )
 
 

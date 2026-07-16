@@ -121,6 +121,25 @@ def resolve_partner(text: str) -> str:
     return partner
 
 
+def remove_domestic_reporter(
+    reporters: list[str], partner: str
+) -> tuple[list[str], str]:
+    """Remove an EU partner's own reporter branch; Comext has no self trade."""
+    if partner not in reporters:
+        return reporters, ""
+    remaining = [reporter for reporter in reporters if reporter != partner]
+    if not remaining:
+        fail(
+            f"reporter '{partner}' and partner '{partner}' are the same country; "
+            "Comext has no domestic trade series"
+        )
+    return remaining, f"domestic reporter {partner} omitted (Comext has no self trade)"
+
+
+def add_note(note: str, extra: str) -> str:
+    return f"{note}; {extra}" if extra else note
+
+
 def limited_positive_int(text: str) -> int:
     try:
         value = int(text)
@@ -162,6 +181,7 @@ def header(reporters: list[str], args: argparse.Namespace, extra: str = "") -> s
 def sql_total(args: argparse.Namespace) -> str:
     reporters = resolve_reporters(args.reporters)
     partner = resolve_partner(args.partner)
+    reporters, domestic_note = remove_domestic_reporter(reporters, partner)
     flow = flow_code(args.flow)
     if args.metric == "supplementary":
         fail(
@@ -195,7 +215,10 @@ def sql_total(args: argparse.Namespace) -> str:
             "GROUP BY reporter\nORDER BY 2 DESC",
         )
     body = f"SELECT {select}\nFROM (\n{union}\n) u\n{group};"
-    note = f"all-goods total via the exact cn6_total series; values in {METRIC_UNITS[args.metric]}"
+    note = add_note(
+        f"all-goods total via the exact cn6_total series; values in {METRIC_UNITS[args.metric]}",
+        domestic_note,
+    )
     return header(reporters, args, note) + "\n" + body
 
 
@@ -227,6 +250,7 @@ def product_branches(
 def sql_products(args: argparse.Namespace) -> str:
     reporters = resolve_reporters(args.reporters)
     partner = resolve_partner(args.partner)
+    reporters, domestic_note = remove_domestic_reporter(reporters, partner)
     flow = flow_code(args.flow)
     suffix = METRICS[args.metric]
     if args.metric == "supplementary":
@@ -256,13 +280,17 @@ def sql_products(args: argparse.Namespace) -> str:
         if args.group_by in ("2", "4", "6")
         else "CN8 names live in eu_comext_lookup.product_codes.product_name"
     )
-    note = f"top products by HS{args.group_by}; values in {METRIC_UNITS[args.metric]}; {label_hint}"
+    note = add_note(
+        f"top products by HS{args.group_by}; values in {METRIC_UNITS[args.metric]}; {label_hint}",
+        domestic_note,
+    )
     return header(reporters, args, note) + "\n" + body
 
 
 def sql_trend(args: argparse.Namespace) -> str:
     reporters = resolve_reporters(args.reporters)
     partner = resolve_partner(args.partner)
+    reporters, domestic_note = remove_domestic_reporter(reporters, partner)
     flow = flow_code(args.flow)
     suffix = METRICS[args.metric]
     lo, hi = date_bounds(args.start, args.end)
@@ -296,7 +324,10 @@ def sql_trend(args: argparse.Namespace) -> str:
         f"GROUP BY t\n"
         f"ORDER BY t;"
     )
-    note = f"monthly trend for HS {code}; values in {METRIC_UNITS[args.metric]}"
+    note = add_note(
+        f"monthly trend for HS {code}; values in {METRIC_UNITS[args.metric]}",
+        domestic_note,
+    )
     return header(reporters, args, note) + "\n" + body
 
 

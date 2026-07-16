@@ -33,9 +33,10 @@ import os
 import re
 import sys
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, DecimalException, InvalidOperation, localcontext
 
 TIME_HINTS = ("time", "month", "date", "t", "period", "quarter", "year")
+MAX_FIXED_DIGITS = 10_000
 
 
 def fail(message: str, code: int = 1) -> None:
@@ -163,11 +164,31 @@ def as_decimal(value, context: str) -> Decimal:
         fail(f"non-numeric value {value!r} in {context}")
     if not result.is_finite():
         fail(f"non-finite value {value!r} in {context}")
+    ensure_fixed_size(result, context)
     return result
+
+
+def fixed_digit_count(value: Decimal) -> int:
+    """Return the number of digits needed by format(value, "f")."""
+    if value == 0:
+        return 1
+    _, digits, exponent = value.as_tuple()
+    if exponent >= 0:
+        return len(digits) + exponent
+    return max(len(digits) + exponent, 1) - exponent
+
+
+def ensure_fixed_size(value: Decimal, context: str) -> None:
+    if fixed_digit_count(value) > MAX_FIXED_DIGITS:
+        fail(
+            f"numeric value in {context} is too large for safe fixed-point output; "
+            "rescale it before using series_math.py"
+        )
 
 
 def format_cell(value) -> str:
     if isinstance(value, Decimal):
+        ensure_fixed_size(value, "output")
         if value == 0:
             return "0"
         text = format(value, "f")
@@ -178,10 +199,12 @@ def format_cell(value) -> str:
 
 
 def emit(header: list[str], rows: list[list]) -> None:
+    # Format every value before writing the header so a bad later cell cannot
+    # leave a caller with a partial table that looks usable.
+    formatted_rows = [[format_cell(value) for value in row] for row in rows]
     writer = csv.writer(sys.stdout, delimiter="\t", lineterminator="\n")
     writer.writerow(header)
-    for row in rows:
-        writer.writerow([format_cell(value) for value in row])
+    writer.writerows(formatted_rows)
 
 
 def split_rows(args, columns, rows):
@@ -190,6 +213,8 @@ def split_rows(args, columns, rows):
     if args.group_col and args.group_col not in columns:
         fail(f"--group-col '{args.group_col}' not in columns {columns}")
     g_idx = columns.index(args.group_col) if args.group_col else None
+    if g_idx == t_idx:
+        fail("--group-col and --time-col must identify different columns")
     v_idx = pick_value_col(
         columns, args.value_col, {t_idx} | ({g_idx} if g_idx is not None else set())
     )
@@ -221,20 +246,52 @@ def split_rows(args, columns, rows):
     return groups, frequency
 
 
+def arithmetic_precision(groups: dict[str, list]) -> int:
+    """Choose enough Decimal precision for exact sums and stable ratios."""
+    values = [value for series in groups.values() for *_, value in series]
+    nonzero_values = [value for value in values if value]
+    if not nonzero_values:
+        return 28
+    highest_place = max(value.adjusted() for value in nonzero_values)
+    lowest_place = min(value.as_tuple().exponent for value in nonzero_values)
+    required = max(28, highest_place - lowest_place + 16)
+    if required > 10_000:
+        fail(
+            "numeric range is too wide for safe decimal arithmetic; rescale the "
+            "values before using series_math.py"
+        )
+    return required
+
+
+def exact_product(value, factor: Decimal, context: str) -> Decimal:
+    left = as_decimal(value, context)
+    ensure_fixed_size(factor, f"scale factor for {context}")
+    required = max(28, len(left.as_tuple().digits) + len(factor.as_tuple().digits) + 2)
+    if required > 10_000:
+        fail(f"numeric value in {context} is too large for safe decimal arithmetic")
+    with localcontext() as decimal_context:
+        decimal_context.prec = required
+        product = left * factor
+    ensure_fixed_size(product, f"scaled value in {context}")
+    return product
+
+
 def cmd_yoy(args) -> None:
     columns, rows = load_table(args.file)
     groups, _ = split_rows(args, columns, rows)
     out = []
-    for key, series in sorted(groups.items()):
-        prior = {(y, m): v for y, m, _, v in series}
-        for y, m, t, v in series:
-            prev = prior.get((y - 1, m))
-            pct = (v / prev - 1) * 100 if prev not in (None, 0) else None
-            out.append(
-                ([key] if args.group_col else [])
-                + [t, v, "" if pct is None else round(pct, 4)]
-            )
-    header = (["group"] if args.group_col else []) + ["time", "value", "yoy_pct"]
+    with localcontext() as context:
+        context.prec = arithmetic_precision(groups)
+        for key, series in sorted(groups.items()):
+            prior = {(y, m): v for y, m, _, v in series}
+            for y, m, t, v in series:
+                prev = prior.get((y - 1, m))
+                pct = (v / prev - 1) * 100 if prev not in (None, 0) else None
+                out.append(
+                    ([key] if args.group_col else [])
+                    + [t, v, "" if pct is None else round(pct, 4)]
+                )
+    header = ([args.group_col] if args.group_col else []) + ["time", "value", "yoy_pct"]
     emit(header, out)
 
 
@@ -242,28 +299,30 @@ def cmd_ytd(args) -> None:
     columns, rows = load_table(args.file)
     groups, _ = split_rows(args, columns, rows)
     out = []
-    for key, series in sorted(groups.items()):
-        cum: dict[tuple[int, int], Decimal] = {}
-        running: dict[int, Decimal] = {}
-        for y, m, t, v in series:
-            running[y] = running.get(y, Decimal(0)) + v
-            cum[(y, m)] = running[y]
-        for y, m, t, v in series:
-            prev = cum.get((y - 1, m))
-            current_periods = {p for yy, p, _, _ in series if yy == y and p <= m}
-            prior_periods = {p for yy, p, _, _ in series if yy == y - 1 and p <= m}
-            expected_periods = set(range(1, m + 1))
-            comparable = current_periods == prior_periods == expected_periods
-            pct = (
-                (cum[(y, m)] / prev - 1) * 100
-                if comparable and prev not in (None, 0)
-                else None
-            )
-            out.append(
-                ([key] if args.group_col else [])
-                + [t, cum[(y, m)], "" if pct is None else round(pct, 4)]
-            )
-    header = (["group"] if args.group_col else []) + [
+    with localcontext() as context:
+        context.prec = arithmetic_precision(groups)
+        for key, series in sorted(groups.items()):
+            cum: dict[tuple[int, int], Decimal] = {}
+            running: dict[int, Decimal] = {}
+            for y, m, t, v in series:
+                running[y] = running.get(y, Decimal(0)) + v
+                cum[(y, m)] = running[y]
+            for y, m, t, v in series:
+                prev = cum.get((y - 1, m))
+                current_periods = {p for yy, p, _, _ in series if yy == y and p <= m}
+                prior_periods = {p for yy, p, _, _ in series if yy == y - 1 and p <= m}
+                expected_periods = set(range(1, m + 1))
+                comparable = current_periods == prior_periods == expected_periods
+                pct = (
+                    (cum[(y, m)] / prev - 1) * 100
+                    if comparable and prev not in (None, 0)
+                    else None
+                )
+                out.append(
+                    ([key] if args.group_col else [])
+                    + [t, cum[(y, m)], "" if pct is None else round(pct, 4)]
+                )
+    header = ([args.group_col] if args.group_col else []) + [
         "time",
         "ytd_value",
         "ytd_yoy_pct",
@@ -277,36 +336,47 @@ def cmd_share(args) -> None:
     columns, rows = load_table(args.file)
     groups, _ = split_rows(args, columns, rows)
     totals: dict[tuple[int, int], Decimal] = {}
-    for series in groups.values():
-        for y, period, _, v in series:
-            totals[(y, period)] = totals.get((y, period), Decimal(0)) + v
     out = []
-    for key, series in sorted(groups.items()):
-        for y, period, t, v in series:
-            total = totals[(y, period)]
-            share = v / total * 100 if total else None
-            out.append([key, t, v, "" if share is None else round(share, 4)])
-    emit(["group", "time", "value", "share_pct"], out)
+    with localcontext() as context:
+        context.prec = arithmetic_precision(groups)
+        for series in groups.values():
+            for y, period, _, v in series:
+                totals[(y, period)] = totals.get((y, period), Decimal(0)) + v
+        for key, series in sorted(groups.items()):
+            for y, period, t, v in series:
+                total = totals[(y, period)]
+                share = v / total * 100 if total else None
+                out.append([key, t, v, "" if share is None else round(share, 4)])
+    emit([args.group_col, "time", "value", "share_pct"], out)
 
 
 def cmd_index(args) -> None:
     by, bm, base_frequency = parse_period(args.base)
     columns, rows = load_table(args.file)
     groups, frequency = split_rows(args, columns, rows)
+    if not groups:
+        fail("cannot build an index from a payload with no rows")
     if frequency is not None and frequency != base_frequency:
         fail(
             f"base period {args.base} is {base_frequency}, but the payload is {frequency}"
         )
     out = []
-    for key, series in sorted(groups.items()):
-        base = next((v for y, m, _, v in series if (y, m) == (by, bm)), None)
-        if base in (None, 0):
-            fail(f"group '{key or '(all)'}' has no usable value at base {args.base}")
-        for _, _, t, v in series:
-            out.append(
-                ([key] if args.group_col else []) + [t, round(v / base * 100, 4)]
-            )
-    header = (["group"] if args.group_col else []) + ["time", f"index_{args.base}=100"]
+    with localcontext() as context:
+        context.prec = arithmetic_precision(groups)
+        for key, series in sorted(groups.items()):
+            base = next((v for y, m, _, v in series if (y, m) == (by, bm)), None)
+            if base in (None, 0):
+                fail(
+                    f"group '{key or '(all)'}' has no usable value at base {args.base}"
+                )
+            for _, _, t, v in series:
+                out.append(
+                    ([key] if args.group_col else []) + [t, round(v / base * 100, 4)]
+                )
+    header = ([args.group_col] if args.group_col else []) + [
+        "time",
+        f"index_{args.base}=100",
+    ]
     emit(header, out)
 
 
@@ -378,8 +448,8 @@ def cmd_merge(args) -> None:
             merged = list(row)
             if factor != 1:
                 assert scale_idx is not None
-                merged[scale_idx] = (
-                    as_decimal(merged[scale_idx], f"{path} row {row}") * factor
+                merged[scale_idx] = exact_product(
+                    merged[scale_idx], factor, f"{path} row {row}"
                 )
             out.append([label] + merged)
     emit(header or ["source"], out)
@@ -427,7 +497,10 @@ def main() -> None:
     p_merge.set_defaults(fn=cmd_merge)
 
     args = parser.parse_args()
-    args.fn(args)
+    try:
+        args.fn(args)
+    except DecimalException as exc:
+        fail(f"decimal arithmetic failed: {exc}")
 
 
 if __name__ == "__main__":

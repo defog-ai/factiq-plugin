@@ -174,6 +174,81 @@ class SqlGeneratorTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("must be YYYY-MM", result.stderr)
 
+    def test_comext_omits_domestic_reporter_and_rejects_self_only(self):
+        common = (
+            "total",
+            "--partner",
+            "de",
+            "--flow",
+            "imports",
+            "--start",
+            "2025-01",
+            "--end",
+            "2025-02",
+        )
+        mixed = run_script("comext_sql.py", *common, "--reporters", "de,fr")
+        self_only = run_script("comext_sql.py", *common, "--reporters", "de")
+        self.assertEqual(mixed.returncode, 0, mixed.stderr)
+        self.assertNotIn("eu_comext_M_de_de_", mixed.stdout)
+        self.assertIn("eu_comext_M_fr_de_", mixed.stdout)
+        self.assertIn("domestic reporter de omitted", mixed.stdout)
+        self.assertNotEqual(self_only.returncode, 0)
+        self.assertIn("no domestic trade series", self_only.stderr)
+
+    def test_trade_combines_historical_china_partner_codes(self):
+        common = (
+            "--source",
+            "china",
+            "--flow",
+            "imports",
+            "--start",
+            "2022-01",
+            "--end",
+            "2023-12",
+        )
+        total = run_script("trade_sql.py", "total", *common, "--partner", "georgia")
+        trend = run_script(
+            "trade_sql.py",
+            "trend",
+            *common,
+            "--partner",
+            "azerbaijan",
+            "--hs",
+            "010121",
+        )
+        exact_code = run_script("trade_sql.py", "total", *common, "--partner", "337")
+        self.assertEqual(total.returncode, 0, total.stderr)
+        self.assertIn("dimension_code IN ('150', '337')", total.stdout)
+        self.assertIn("combined historical partner codes 150, 337", total.stdout)
+        self.assertEqual(trend.returncode, 0, trend.stderr)
+        self.assertIn("china_customs_M_6d_010121_152", trend.stdout)
+        self.assertIn("china_customs_M_6d_010121_339", trend.stdout)
+        self.assertIn("SUM(value)", trend.stdout)
+        self.assertEqual(exact_code.returncode, 0, exact_code.stderr)
+        self.assertIn("dimension_code = '337'", exact_code.stdout)
+        self.assertNotIn("dimension_code IN", exact_code.stdout)
+
+    def test_trade_groups_historical_codes_for_fragments_and_normalizes_aliases(self):
+        common = (
+            "total",
+            "--flow",
+            "imports",
+            "--start",
+            "2022-01",
+            "--end",
+            "2023-12",
+        )
+        fragment = run_script(
+            "trade_sql.py", *common, "--source", "china", "--partner", "azer"
+        )
+        alias = run_script(
+            "trade_sql.py", *common, "--source", "korea", "--partner", "U.S."
+        )
+        self.assertEqual(fragment.returncode, 0, fragment.stderr)
+        self.assertIn("dimension_code IN ('152', '339')", fragment.stdout)
+        self.assertEqual(alias.returncode, 0, alias.stderr)
+        self.assertIn("dimension_code = 'US'", alias.stdout)
+
 
 class HsCodeTests(unittest.TestCase):
     def test_lookup_requires_numeric_code(self):
@@ -195,6 +270,20 @@ class HsCodeTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("850760", result.stdout)
+
+    def test_code_lookup_does_not_emit_partial_results(self):
+        result = run_script("hs_codes.py", "85", "not-a-code")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_search_only_options_are_rejected_for_code_lookup(self):
+        limit = run_script("hs_codes.py", "85", "--limit", "2")
+        mixed = run_script("hs_codes.py", "85", "--search", "battery")
+        self.assertNotEqual(limit.returncode, 0)
+        self.assertIn("can only be used with --search", limit.stderr)
+        self.assertNotEqual(mixed.returncode, 0)
+        self.assertIn("either HS codes or --search", mixed.stderr)
 
 
 class SeriesMathTests(unittest.TestCase):
@@ -333,6 +422,92 @@ class SeriesMathTests(unittest.TestCase):
         self.assertEqual(colon_result.returncode, 0, colon_result.stderr)
         self.assertIn("actual\t2025-01\t100", colon_result.stdout)
         self.assertIn("already has a 'source' column", collision_result.stderr)
+
+    def test_time_and_group_columns_must_differ(self):
+        path = self.payload("same-column.json", ["month", "value"], [["2025-01", 1]])
+        result = run_script(
+            "series_math.py",
+            "yoy",
+            "--file",
+            path,
+            "--group-col",
+            "month",
+            "--value-col",
+            "value",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("must identify different columns", result.stderr)
+
+    def test_index_rejects_empty_payload(self):
+        path = self.payload("empty.json", ["month", "value"], [])
+        result = run_script(
+            "series_math.py", "index", "--file", path, "--base", "2025-01"
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("payload with no rows", result.stderr)
+
+    def test_ytd_preserves_large_decimal_sums(self):
+        path = self.payload(
+            "large-ytd.json",
+            ["month", "value"],
+            [
+                ["2025-01", "123456789012345678901234567890.1"],
+                ["2025-02", "0.2"],
+            ],
+        )
+        result = run_script("series_math.py", "ytd", "--file", path)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("2025-02\t123456789012345678901234567890.3\t", result.stdout)
+
+    def test_extreme_decimal_range_fails_without_traceback(self):
+        path = self.payload(
+            "extreme.json",
+            ["year", "value"],
+            [["2024", "1e-6000"], ["2025", "1e6000"]],
+        )
+        result = run_script("series_math.py", "yoy", "--file", path)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("numeric range is too wide", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_single_extreme_decimal_and_scaled_result_fail_without_expanding(self):
+        path = self.payload(
+            "single-extreme.json", ["year", "value"], [["2025", "1e999999"]]
+        )
+        value_result = run_script("series_math.py", "yoy", "--file", path)
+        merge_path = self.payload(
+            "merge-extreme.json", ["month", "value"], [["2025-01", "1e9000"]]
+        )
+        merge_result = run_script(
+            "series_math.py", "merge", "--input", f"large={merge_path}:1e9000"
+        )
+        unscaled_path = self.directory / "unscaled-extreme.json"
+        unscaled_path.write_text(
+            '{"columns":["month","value"],"results":[["2025-01",1e999999]]}',
+            encoding="utf-8",
+        )
+        unscaled_result = run_script(
+            "series_math.py", "merge", "--input", f"large={unscaled_path}"
+        )
+        self.assertNotEqual(value_result.returncode, 0)
+        self.assertIn("too large for safe fixed-point output", value_result.stderr)
+        self.assertEqual(value_result.stdout, "")
+        self.assertNotEqual(merge_result.returncode, 0)
+        self.assertIn("scaled value", merge_result.stderr)
+        self.assertEqual(merge_result.stdout, "")
+        self.assertNotEqual(unscaled_result.returncode, 0)
+        self.assertIn("too large for safe fixed-point output", unscaled_result.stderr)
+        self.assertEqual(unscaled_result.stdout, "")
+
+    def test_merge_does_not_round_large_scaled_values(self):
+        path = self.payload(
+            "large-merge.json",
+            ["month", "value"],
+            [["2025-01", "123456789012345678901234567890.1"]],
+        )
+        result = run_script("series_math.py", "merge", "--input", f"large={path}:0.1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("12345678901234567890123456789.01", result.stdout)
 
 
 if __name__ == "__main__":
