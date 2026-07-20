@@ -144,7 +144,7 @@ Codex talk to natively over a single OAuth connection.
 │  discover   search_datasets, describe_dataset, search_series,
 │             get_data_catalog
 │  fetch      run_sql (read-only), get_series, get_market_data,
-│             search_earnings_transcripts
+│             search_earnings_transcripts, search_news
 │  publish    share_chart, share_report
 └──────────────┬──────────────┘
                │
