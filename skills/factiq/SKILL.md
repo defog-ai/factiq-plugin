@@ -5,7 +5,8 @@ description: >
   data: US indicators (BLS employment/CPI, BEA GDP, Census trade, EIA energy,
   USDA ERS, BTS transport); international data (China NBS/customs, India
   MOSPI/RBI/trade, EU Comext, Singapore, IMF, World Bank); stocks,
-  commodities/forex; and earnings-call transcripts. Use for unemployment,
+  commodities/forex; earnings-call transcripts; and leadership appearances in
+  podcasts, television interviews, and conferences. Use for unemployment,
   inflation, GDP, trade flows, energy, wages, markets, economic charts or maps,
   terminal previews, multi-section research reports, and custom HTML
   dashboards. Discover series, query SQL, compute, then return a sourced answer
@@ -22,7 +23,7 @@ allowed-tools: >
 
 You are the analyst. FactIQ provides authenticated **MCP tools** for the whole
 loop — discover the data (catalog, dataset/series search, read-only SQL, series
-lookup, market data, earnings-transcript search), then publish the result (`share_chart`,
+lookup, market data, earnings and media-appearance search), then publish the result (`share_chart`,
 `share_report`). There is no server-side agent: you decompose the question, find
 the data with the MCP tools, do the math with your own tokens, then either
 answer directly in a sentence or author the output and publish it with a tool
@@ -135,9 +136,11 @@ All FactIQ tools are MCP tools provided by the `factiq` MCP server.
 | `get_series` (`schema`, `series_id`, `from_year?`, `to_year?`) | Fetch one series — timeseries, tabular, or `COMPOUND::` ids all work. |
 | `get_market_data` (`function`, `symbol?`, `interval?`, `outputsize?`) | Quotes, daily/weekly/monthly series, fundamentals (OVERVIEW, INCOME_STATEMENT, EARNINGS), FX, commodities (WTI, BRENT, GOLD), SYMBOL_SEARCH. |
 | `search_earnings_transcripts` (`query`, `search_target?`, `company_filter?`, `quarter_filter?`, `claim_family?`, `section?`, `detail?`, `limit?`) | Full-text (lexical, not semantic) search over earnings-call transcripts — atomic, quote-anchored rows decomposed from live calls, never a raw transcript dump. All query terms must match (websearch syntax; fuzzy fallback catches typos) — retry with the company's own vocabulary (`"capital expenditure"` vs `"capex"`) before concluding silence. An empty `query` browses the newest rows: with `company_filter` that reads one call's claim spine in spoken order. `search_target`: `"claims"` (default — management's guidance/comparisons/quantified statements, with `direction`/`value`/`unit` where checkable plus `assertion_status` — never present an `analyst_hypothesized` row as management's claim), `"pressure_points"` (what analysts pressed for in Q&A and whether management confirmed/declined/deflected, incl. the specific number refused), `"disclosure_profile"` (ticker-only lookup of what a company routinely discloses vs. withholds), or `"coverage"` (which tickers/quarters exist, with claim counts — call it first when unsure a company is covered). Narrow with `company_filter` (ticker or comma-separated `"MU,NVDA"`) / `quarter_filter` (e.g. `"FY2026Q3"`) / `claim_family` (18-code vocabulary — invalid values return the list) / `section` (`"prepared_remarks"` vs `"qa"`, claims only). `detail=true` adds `structured_fields` (the per-family quantified payload) and other normalized columns. `limit` is 1–50 (default 15). For filed XBRL financials use `run_sql` on the `sec` schema; for formally issued targets use `sec_guidance` — this tool covers what was said live. Full workflow: `references/report-patterns/earnings-intelligence.md`. |
+| `search_media_appearances` (`query`, `search_target?`, `company_filter?`, `appearance_type?`, `claim_family?`, `date_from?`, `date_to?`, `detail?`, `limit?`) | Lexical full-text search over curated leadership appearances outside earnings calls — podcasts, television interviews, and conferences. `"claims"` returns atomic statements with speaker, verbatim quote, `assertion_status`, and a YouTube timestamp link; `"appearances"` lists videos and claim counts; `"coverage"` lists covered companies, channels, dates, claims, and low-confidence attribution counts. An empty query browses newest-first. Filter by primary ticker/referenced entity, appearance type, claim family, or inclusive ISO date range. Attribution starts as LLM-inferred and is admin-confirmed: check `attribution_confidence`, and never present `analyst_hypothesized` as an executive's own claim. Matching is not semantic, so retry synonyms. `detail=true` adds normalized fields and provenance state; `limit` is 1–50. |
 | `get_style_guides` (`guides`) | FactIQ's house-style guides (`"chart"`, `"report"`, `"sql"`, `"earnings"`, or `"all"`). Optional; this skill's `references/` already cover the **publishing** JSON formats — use these guides for extra house-style detail. Fetch `"earnings"` before writing anything built from `search_earnings_transcripts` (quoting discipline, spoken-vs-filed sourcing). |
 
-Every row-returning tool (`run_sql`, `get_series`, `search_earnings_transcripts`) returns **at most 50 rows**.
+Every row-returning tool (`run_sql`, `get_series`, `search_earnings_transcripts`,
+`search_media_appearances`) returns **at most 50 rows**.
 When a result comes back `"truncated": true` there is more data — your move is
 to **aggregate or compute in SQL** (a `GROUP BY date_trunc(...)`, a
 SUM/AVG/rank/ratio) and fetch that, or window a single series with

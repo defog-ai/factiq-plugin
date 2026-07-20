@@ -144,7 +144,7 @@ Codex talk to natively over a single OAuth connection.
 │  discover   search_datasets, describe_dataset, search_series,
 │             get_data_catalog
 │  fetch      run_sql (read-only), get_series, get_market_data,
-│             search_earnings_transcripts
+│             search_earnings_transcripts, search_media_appearances
 │  publish    share_chart, share_report
 └──────────────┬──────────────┘
                │
@@ -175,7 +175,7 @@ recipes live in [`references/data/sql-guide.md`](references/data/sql-guide.md).
 
 | Region | Schemas |
 |---|---|
-| United States | SEC filings data, BLS (employment, CPI, JOLTS, OEWS), Census (trade incl. HS-level, retail, housing), BEA (GDP, income), EIA (energy), USDA ERS, BTS (transportation), earnings-call transcripts |
+| United States | SEC filings data, BLS (employment, CPI, JOLTS, OEWS), Census (trade incl. HS-level, retail, housing), BEA (GDP, income), EIA (energy), USDA ERS, BTS (transportation), earnings-call transcripts, and curated leadership media appearances |
 | China | NBS macro indicators, GACC customs (HS-level trade) |
 | India | MOSPI (CPI, WPI, IIP, GDP), RBI (banking, rates, forex), DGCI&S trade (HS-level), city traffic |
 | South Korea | KCS customs (HS-level trade) |

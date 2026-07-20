@@ -107,14 +107,17 @@ reading if used at all.
 ## Data Source Ladder
 
 1. `search_earnings_transcripts` — spoken claims, Q&A, disclosure habits.
-2. `sec` via `run_sql` — filed XBRL segment/product/geo detail, `sec_guidance`
+2. `search_media_appearances` — off-call claims, with YouTube evidence links.
+   Treat attribution as inferred unless confirmed, check
+   `attribution_confidence`, and preserve `analyst_hypothesized`.
+3. `sec` via `run_sql` — filed XBRL segment/product/geo detail, `sec_guidance`
    formal targets, `sec_kpi` operating metrics.
-3. `get_market_data` — consolidated statements (faster than XBRL), quotes,
+4. `get_market_data` — consolidated statements (faster than XBRL), quotes,
    price history for reaction windows.
-4. Macro schemas (`bls`/`census`/`eia`/`frb`/trade/`policy`) — the
+5. Macro schemas (`bls`/`census`/`eia`/`frb`/trade/`policy`) — the
    verification layer for any macro claim.
-5. Never `run_sql` on the `transcripts` schema — it is bespoke and gated;
-   the tool is the only supported access.
+6. Never `run_sql` on the `transcripts` schema — it is bespoke and gated;
+   the transcript and media tools are the only supported access.
 
 ## Default Report Shape
 
