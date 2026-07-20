@@ -5,10 +5,10 @@ description: >
   data: US indicators (BLS employment/CPI, BEA GDP, Census trade, EIA energy,
   USDA ERS, BTS transport); international data (China NBS/customs, India
   MOSPI/RBI/trade, EU Comext, Singapore, IMF, World Bank); stocks,
-  commodities/forex; and earnings-call transcripts. Use for unemployment,
-  inflation, GDP, trade flows, energy, wages, markets, economic charts or maps,
-  terminal previews, multi-section research reports, and custom HTML
-  dashboards. Discover series, query SQL, compute, then return a sourced answer
+  commodities/forex; earnings-call transcripts; and a curated business-news
+  feed. Use for unemployment, inflation, GDP, trade flows, energy, wages,
+  markets, recent news context, economic charts or maps, terminal previews,
+  multi-section research reports, and custom HTML dashboards. Discover series, query SQL, compute, then return a sourced answer
   or publish/render the requested output. For bilateral trade, use the bundled
   SQL generators instead of hand-writing schema-specific queries.
 allowed-tools: >
@@ -135,6 +135,7 @@ All FactIQ tools are MCP tools provided by the `factiq` MCP server.
 | `get_series` (`schema`, `series_id`, `from_year?`, `to_year?`) | Fetch one series — timeseries, tabular, or `COMPOUND::` ids all work. |
 | `get_market_data` (`function`, `symbol?`, `interval?`, `outputsize?`) | Quotes, daily/weekly/monthly series, fundamentals (OVERVIEW, INCOME_STATEMENT, EARNINGS), FX, commodities (WTI, BRENT, GOLD), SYMBOL_SEARCH. |
 | `search_earnings_transcripts` (`query`, `search_target?`, `company_filter?`, `quarter_filter?`, `claim_family?`, `section?`, `detail?`, `limit?`) | Full-text (lexical, not semantic) search over earnings-call transcripts — atomic, quote-anchored rows decomposed from live calls, never a raw transcript dump. All query terms must match (websearch syntax; fuzzy fallback catches typos) — retry with the company's own vocabulary (`"capital expenditure"` vs `"capex"`) before concluding silence. An empty `query` browses the newest rows: with `company_filter` that reads one call's claim spine in spoken order. `search_target`: `"claims"` (default — management's guidance/comparisons/quantified statements, with `direction`/`value`/`unit` where checkable plus `assertion_status` — never present an `analyst_hypothesized` row as management's claim), `"pressure_points"` (what analysts pressed for in Q&A and whether management confirmed/declined/deflected, incl. the specific number refused), `"disclosure_profile"` (ticker-only lookup of what a company routinely discloses vs. withholds), or `"coverage"` (which tickers/quarters exist, with claim counts — call it first when unsure a company is covered). Narrow with `company_filter` (ticker or comma-separated `"MU,NVDA"`) / `quarter_filter` (e.g. `"FY2026Q3"`) / `claim_family` (18-code vocabulary — invalid values return the list) / `section` (`"prepared_remarks"` vs `"qa"`, claims only). `detail=true` adds `structured_fields` (the per-family quantified payload) and other normalized columns. `limit` is 1–50 (default 15). For filed XBRL financials use `run_sql` on the `sec` schema; for formally issued targets use `sec_guidance` — this tool covers what was said live. Full workflow: `references/report-patterns/earnings-intelligence.md`. |
+| `search_news` (`query?`, `tickers?`, `topic?`, `sources?`, `start_date?`, `end_date?`, `sort?`, `detail?`, `limit?`) | Search FactIQ's curated business-news feed — public RSS headlines and summaries from Bloomberg, the Financial Times, and the Wall Street Journal, plus India-macro (Zerodha Daily Brief, ET HealthWorld) and global-health sources (WHO, ECDC, CDC, STAT News, KFF), aggregated and processed by FactIQ so each article carries the listed companies it names (`{symbol, exchange, country}`), topical keywords, and the FactIQ schemas that can ground the story in data — pivot from a story straight into `search_datasets`/`run_sql` via those schemas. Results are headline + short publisher summary + link out, never full articles. `query` is lexical full-text over headline+summary — use short concrete stems (`"obesity drug"`, `"rate cut"`), not jargon strings. `tickers` matches share classes and cross-listings automatically (GOOG also finds GOOGL-tagged articles, TSM its Taiwan listing) — pass whichever symbol you know; most macro stories name no listed company, so zero ticker matches is a normal answer. `topic` is one of markets / economics / companies / technology / politics / world / energy / health / india / opinion; `sort` is `"latest"` (default) or `"relevance"` (needs a query); `detail=true` adds FactIQ's extracted analytical angles per article; `limit` 1–50 (default 20). Coverage is recent news (most feeds start late 2025), and the feed is continuously being expanded and improved — treat it as a current-events lens, not an archive. |
 | `get_style_guides` (`guides`) | FactIQ's house-style guides (`"chart"`, `"report"`, `"sql"`, `"earnings"`, or `"all"`). Optional; this skill's `references/` already cover the **publishing** JSON formats — use these guides for extra house-style detail. Fetch `"earnings"` before writing anything built from `search_earnings_transcripts` (quoting discipline, spoken-vs-filed sourcing). |
 
 Every row-returning tool (`run_sql`, `get_series`, `search_earnings_transcripts`) returns **at most 50 rows**.
@@ -278,7 +279,10 @@ local visualizations**). Local-only; never calls the API.
    write your own Python locally on the fetched values. There is no server-side
    code interpreter in this loop.
 5. **Recent market data.** The DB lags for very recent market/price data — use
-   `get_market_data` for current quotes, commodities, and FX.
+   `get_market_data` for current quotes, commodities, and FX. For what the
+   news is saying about a company, sector, or economy right now, use
+   `search_news` — its per-article schema tags point back to the FactIQ data
+   that can substantiate the story.
 6. **Answer, publish, render, or build.** Direct-answer mode: once you have the
    value, reply with a single sentence stating the number, its period, and the
    source — no ChartSpec, no `share_chart`, no terminal render. Quick-chart mode:
