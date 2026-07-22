@@ -67,6 +67,42 @@ reporters are available: `at`, `be`, `bg`, `hr`, `cy`, `cz`, `dk`, `ee`, `fi`,
 Comext section of `sql-guide.md` before querying; its large country tables need
 exact series IDs rather than dimension searches.
 
+## United Kingdom
+
+| Schema | Source | Coverage |
+|---|---|---|
+| `uk` | ONS, Bank of England, HMRC, DEFRA, DBT, DfT | Six datasets in one schema — see below |
+
+The `uk` schema holds six datasets (filter on `dataset_code`):
+
+- `ons_macro` — ~50 curated Office for National Statistics headline series:
+  GDP and components (from 1955, plus the monthly GDP index), CPI/CPIH/RPI and
+  core inflation, producer prices, the labour market and earnings, retail
+  sales, public-sector borrowing and debt, trade balances, production,
+  services, population, productivity. Series ids are `ons_macro.<cdid>`.
+- `boe_macro_finance` — Bank of England: Bank Rate and SONIA (daily, from
+  1975/1997), gilt par yields at 5/10/20 years, sterling FX rates and the
+  effective index, M4 money and credit aggregates, quoted household mortgage
+  and deposit rates. Series ids are `boe_macro_finance.<code>`.
+- `hmrc_trade` — monthly UK goods trade from 2000 at three grains: totals per
+  partner country (GBP value and net mass), UK-to-world per 2-digit HS
+  chapter, and partner x chapter (value only). No product detail below the
+  2-digit chapter. Product levels `TOTAL` and `HS2` restate the same trade —
+  filter to exactly one product level and never sum across them. Chapter 99
+  (miscellaneous/confidential goods) follows a slightly different suppression
+  convention before and after 2016; avoid trend claims that hinge on it
+  around that boundary.
+- `dft_road_traffic` — Department for Transport road traffic for Great
+  Britain (England, Scotland, and Wales only — not Northern Ireland): annual
+  average daily flow per count point, total and by direction; sampled hourly
+  roadside counts; regional and local-authority vehicle miles. AADF is an
+  average flow at one road link — never sum it across count points; vehicle
+  totals overlap their component classes.
+- `defra_environment` — annual UK air pollutant emissions (from 1970) and
+  cereal/oilseed yields by crop (tonnes per hectare, wheat from 1885).
+- `dbt_trade` — annual inward-investment results (FDI projects and jobs);
+  fiscal years are dated at January of their start year.
+
 ## Global / other
 
 | Schema | Source | Coverage |
@@ -84,6 +120,7 @@ exact series IDs rather than dimension searches.
 - Trade-war / commodity-flow stories → `census` + `china_customs` +
   `india_trade` + `korea_trade` + the relevant `eu_comext_<iso2>` schemas cover
   the same flows from each country's own records when those reporters are in scope
+- UK anything → `uk` (macro, rates, trade, environment, road traffic in one schema)
 - Cross-country comparisons → `imf` / `worldbank`
 - Company-specific: consolidated quotes/fundamentals → `get_market_data` tool (not SQL); segment/product/geography detail, forward guidance, or operating KPIs (ARR, RevPAR, ...) → `sec` schema via `run_sql`; what management said live on a call → `search_earnings_transcripts` tool (not SQL)
 
