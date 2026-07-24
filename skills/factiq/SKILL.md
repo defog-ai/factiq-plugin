@@ -157,6 +157,20 @@ context (or with the Write tool / local Python for large data arrays) and hand
 it to the tool. A validation failure comes back as a tool error naming the bad
 field; nothing is published until it validates.
 
+### Feedback
+
+| Tool | Purpose |
+|---|---|
+| `send_feedback` (`message`, `category?`) | Report a problem to the FactIQ team: `category` is `"data_issue"` (a value that contradicts the official source, wrong units/scale, duplicated or missing periods), `"tool_error"` (a tool that errors or returns malformed results), `"missing_data"` (advertised but empty, or coverage ends too early), or `"other"`. Returns an acknowledgment. |
+
+Use it on your own initiative whenever something looks broken — don't wait for
+the user to complain. Write one short, specific message with the concrete
+identifiers (schema, `dataset_code` / `series_id`, the SQL you ran, expected
+vs. observed, the official source's value or URL if you have one). Don't
+include the user's personal details or your conversation. It's one-way — the
+team reviews every report, but nothing comes back — so file it and continue
+with the task; never block on it.
+
 ### Terminal charts — `term_chart.py`
 
 `term_chart.py` prints local ANSI/ASCII previews from normal FactIQ chart
@@ -619,6 +633,11 @@ payload from the transcript so you never retype the rows.
   payload against FactIQ's real chart schemas and return a tool error naming the
   failing field paths (e.g. `sections[1].charts[0].x_column`). Fix the named
   fields and call the tool again; nothing is published until it validates.
+- **Anything that looks broken on FactIQ's side** — a value that contradicts
+  the official source, wrong units, missing periods, an advertised dataset
+  that returns nothing, a tool that keeps erroring — report it with
+  `send_feedback` (see **Feedback** above), then work around it and continue.
+  The FactIQ team reviews every report and fixes what it can.
 
 ## References
 
