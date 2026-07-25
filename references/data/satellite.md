@@ -1,10 +1,10 @@
 # Satellite data — `get_geo_data`
 
-Satellite-derived indicators that exist in no statistical warehouse, fetched
-live from the provider and aggregated over a region server-side. Use them for
-signals official statistics can't see or publish too slowly: crop burning as
-it happens, industrial activity from emissions, smoke and haze episodes,
-monsoon rainfall by state, heatwaves, agricultural drought.
+Satellite-derived indicators, fetched live from the provider and aggregated
+over a region server-side. Use them when official statistics are too slow for
+the question or don't cover it: crop burning as it happens, industrial
+activity from emissions, smoke and haze episodes, monsoon rainfall by state,
+heatwaves, agricultural drought.
 
 Read this before the first `get_geo_data` call in a session.
 
