@@ -4,7 +4,9 @@ Turn your agent into a finance and economy analyst. This plugin for
 [Claude Code](https://code.claude.com/docs/en/plugins) and
 [Codex](https://github.com/openai/codex) gives the agent direct access to
 FactIQ's warehouse of official statistics — SEC filings, US, China, India, Korea, IMF,
-World Bank, and more — plus live market data and earnings-call transcripts.
+World Bank, and more — plus live market data, earnings-call transcripts, and
+satellite-derived data (fire detections, air-quality activity signals,
+rainfall, nighttime lights, shipping and port activity, reservoir levels).
 The agent discovers series, runs read-only SQL on FactIQ's database, computes 
 derived metrics, and publishes the result as a shareable FactIQ chart or report, 
 a terminal preview, or a bespoke local HTML visualization.

@@ -110,6 +110,8 @@ The `uk` schema holds six datasets (filter on `dataset_code`):
 | `imf` | International Monetary Fund | Cross-country macro indicators |
 | `worldbank` | World Bank | Development and macro indicators by country |
 | `singstat` | Singapore Department of Statistics | Singapore national statistics |
+| `portwatch` | IMF PortWatch (satellite-AIS) | Daily shipping: transit calls + trade capacity for 28 chokepoints (Suez, Hormuz, Malacca…), port calls + import/export volume estimates for 196 countries and 2,065 ports, 2019→, refreshed weekly (data runs a few days to a week behind) |
+| `satellite` | NASA / CNES satellite-derived | Monthly nighttime lights by country + state (economic-activity proxy, Asia focus, 2019→); lake & reservoir water levels from radar altimetry (650 water bodies incl. 88 Chinese, 15 major Indian reservoirs, 1990s→, per-overpass). Water-level stations come in two grades (`grade` dimension): `operational` updates ~weekly; `research` stations are frozen scientific archives (many end 2020-22) — always check the series `end_time` before presenting a level as current, and filter to operational for live readings |
 
 ## Picking schemas
 
@@ -122,6 +124,13 @@ The `uk` schema holds six datasets (filter on `dataset_code`):
   the same flows from each country's own records when those reporters are in scope
 - UK anything → `uk` (macro, rates, trade, environment, road traffic in one schema)
 - Cross-country comparisons → `imf` / `worldbank`
+- Shipping disruptions, chokepoint transits (Suez/Hormuz/Malacca), real-time
+  trade activity → `portwatch` (daily grain, satellite-AIS based, refreshed
+  weekly; cite IMF PortWatch)
+- Nighttime lights (activity proxy), reservoir/lake water levels (hydropower,
+  irrigation, drought) → `satellite` schema; for on-demand fires/NO2/SO2/CO/
+  aerosol/rainfall/NDVI over arbitrary regions → the `get_geo_data` tool
+  instead (see `references/data/satellite.md`)
 - Company-specific: consolidated quotes/fundamentals → `get_market_data` tool (not SQL); segment/product/geography detail, forward guidance, or operating KPIs (ARR, RevPAR, ...) → `sec` schema via `run_sql`; what management said live on a call → `search_earnings_transcripts` tool (not SQL)
 
 HS trade schemas (`us_census_hs` in census, `china_customs`, `india_trade`,
