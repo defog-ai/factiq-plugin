@@ -179,7 +179,7 @@ recipes live in [`references/data/sql-guide.md`](references/data/sql-guide.md).
 |---|---|
 | United States | SEC filings data, BLS (employment, CPI, JOLTS, OEWS), Census (trade incl. HS-level, retail, housing), BEA (GDP, income), EIA (energy), USDA ERS, BTS (transportation), earnings-call transcripts |
 | China | NBS macro indicators, GACC customs (HS-level trade) |
-| India | MOSPI (CPI, WPI, IIP, GDP), RBI (banking, rates, forex), DGCI&S trade (HS-level), city traffic |
+| India | MOSPI (CPI, WPI, IIP, GDP), RBI (banking, rates, forex), DGCI&S trade (HS-level), Bengaluru road traffic (2026 onward, that one city only) |
 | South Korea | KCS customs (HS-level trade) |
 | European Union | Eurostat Comext monthly trade for all 27 member-state reporters, by CN8 product and partner country |
 | Global | IMF, World Bank, Singapore SingStat, live market data (quotes, fundamentals, FX, commodities) |
