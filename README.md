@@ -182,7 +182,7 @@ recipes live in [`references/data/sql-guide.md`](references/data/sql-guide.md).
 | India | MOSPI (CPI, WPI, IIP, GDP), RBI (banking, rates, forex), DGCI&S trade (HS-level), Bengaluru road traffic (2026 onward, that one city only) |
 | South Korea | KCS customs (HS-level trade) |
 | European Union | Eurostat Comext monthly trade for all 27 member-state reporters, by CN8 product and partner country |
-| Global | IMF, World Bank, Singapore SingStat, live market data (quotes, fundamentals, FX, commodities) |
+| Global | IMF (including the recent earlier releases of its forecasts, so a revision can be traced), World Bank, Singapore SingStat, live market data (quotes, fundamentals, FX, commodities) |
 
 `references/data/schemas.md` has the static overview; the `get_data_catalog` tool
 returns the live, authoritative version.

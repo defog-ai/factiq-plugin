@@ -275,6 +275,15 @@ local visualizations**). Local-only; never calls the API.
    `references/data/sql-guide.md`; it uses the small product lookup table and
    exact indexed series IDs.
 
+   The IMF replaces each forecast in place, but the `imf` schema also keeps the
+   recent earlier releases of the World Economic Outlook, the Fiscal Monitor,
+   the Regional Economic Outlooks and COFER. Use them for any question about how
+   a forecast has been revised. The plain series id is always the newest
+   release; an earlier one is the same id with the year and month appended
+   (`WEO_IND.NGDPD.A_2025OCT`), lives in a dataset whose code ends in
+   `_vintages`, and carries a `release` dimension. See **IMF past releases** in
+   `references/data/schemas.md`.
+
    **Domain report patterns.** If the question is broad and analytical —
    policy, trade, revenue, investment analysis, "what's driving X" — read
    `references/report-patterns/README.md` **before fetching**. It teaches the

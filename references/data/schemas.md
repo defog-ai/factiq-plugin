@@ -107,11 +107,41 @@ The `uk` schema holds six datasets (filter on `dataset_code`):
 
 | Schema | Source | Coverage |
 |---|---|---|
-| `imf` | International Monetary Fund | Cross-country macro indicators |
+| `imf` | International Monetary Fund | Cross-country macro indicators, plus the earlier releases of the forecast publications (World Economic Outlook, Fiscal Monitor, the Regional Economic Outlooks, COFER) — see "IMF past releases" below |
 | `worldbank` | World Bank | Development and macro indicators by country |
 | `singstat` | Singapore Department of Statistics | Singapore national statistics |
 | `portwatch` | IMF PortWatch (satellite-AIS) | Daily shipping: transit calls + trade capacity for 28 chokepoints (Suez, Hormuz, Malacca…), port calls + import/export volume estimates for 196 countries and 2,065 ports, 2019→, refreshed weekly (data runs a few days to a week behind) |
 | `satellite` | NASA / CNES satellite-derived | Monthly nighttime lights by country + state (economic-activity proxy, Asia focus, 2019→); lake & reservoir water levels from radar altimetry (650 water bodies incl. 88 Chinese, 15 major Indian reservoirs, 1990s→, per-overpass). Water-level stations come in two grades (`grade` dimension): `operational` updates ~weekly; `research` stations are frozen scientific archives (many end 2020-22) — always check the series `end_time` before presenting a level as current, and filter to operational for live readings |
+
+## IMF past releases
+
+The IMF publishes a forecast, then replaces it in place at the next release: once
+the April 2026 World Economic Outlook is out, the October 2025 numbers are gone
+from the IMF's site. The `imf` schema keeps both, so you can show how a forecast
+moved between releases.
+
+- The plain series id is always the **newest** release. `WEO_IND.NGDPD.A` is
+  India's nominal GDP in US dollars from the current WEO.
+- An earlier release is the same id with the release appended:
+  `WEO_IND.NGDPD.A_2025OCT`, `WEO_IND.NGDPD.A_2025APR`. The suffix is the year
+  and the three-letter month of publication.
+- Earlier-release series sit in their own datasets — `dataset_code` is
+  `weo_vintages`, `fm_vintages`, `afrreo_vintages`, `apdreo_vintages`,
+  `whdreo_vintages` or `cofer_vintages` — and each one carries a `release`
+  dimension (`dimension_code` `2025OCT`, `dimension_name` "October 2025")
+  alongside the usual `country`, `indicator` and `frequency` dimensions.
+- Example of what this answers: India's projected 2030 nominal GDP was
+  6.77 trillion US dollars in the April 2025 WEO, 6.63 trillion in the October
+  2025 WEO, and 6.17 trillion in the April 2026 WEO.
+- The African and Western Hemisphere Regional Economic Outlooks (`afrreo`,
+  `whdreo`) changed their indicator codes between releases, so for those two
+  match an earlier release to the current one on the indicator's
+  `dimension_name`, not on the code. WEO, Fiscal Monitor, APDREO and COFER codes
+  are stable.
+- How far back this goes depends on the publication: the IMF only makes its
+  recent releases retrievable, so expect two or three per publication rather than
+  a long history. Query `dimension_type = 'release'` to see which ones are
+  actually there before promising a comparison.
 
 ## Picking schemas
 
@@ -124,6 +154,8 @@ The `uk` schema holds six datasets (filter on `dataset_code`):
   the same flows from each country's own records when those reporters are in scope
 - UK anything → `uk` (macro, rates, trade, environment, road traffic in one schema)
 - Cross-country comparisons → `imf` / `worldbank`
+- How an IMF forecast has been revised between releases → the `*_vintages`
+  datasets in `imf` (see "IMF past releases" above)
 - Shipping disruptions, chokepoint transits (Suez/Hormuz/Malacca), real-time
   trade activity → `portwatch` (daily grain, satellite-AIS based, refreshed
   weekly; cite IMF PortWatch)
