@@ -5,15 +5,17 @@ description: >
   data: US indicators (BLS employment/CPI, BEA GDP, Census trade, EIA energy,
   USDA ERS, BTS transport); international data (China NBS/customs, India
   MOSPI/RBI/trade, EU Comext, Singapore, IMF, World Bank); stocks,
-  commodities/forex; earnings-call transcripts; a curated business-news
-  feed; and satellite-derived data: nighttime lights by country and state,
+  commodities/forex; earnings-call transcripts; executive media appearances
+  from podcasts, TV interviews, and conferences; a curated business-news feed;
+  and satellite-derived data: nighttime lights by country and state,
   lake and reservoir water levels, daily shipping and port activity
   (chokepoint transits, port calls, seaborne trade estimates), plus on-demand
   signals (fire detections/crop burning with mappable footprints, NO2/SO2/CO
   industrial and combustion activity, smoke and dust aerosol, crop-condition
   NDVI, monsoon rainfall, heatwaves, soil moisture — by country, state, or
   bounding box). Use for unemployment, inflation, GDP, trade flows, energy, wages,
-  markets, recent news context, stubble burning, wildfires, air quality,
+  markets, earnings and executive-media intelligence, recent news context,
+  stubble burning, wildfires, air quality,
   monsoon or drought conditions, nighttime lights, reservoir levels, shipping
   or chokepoint traffic, economic charts or maps, terminal previews,
   multi-section research reports, and custom HTML dashboards. Discover series, query SQL, compute, then return a sourced answer
@@ -30,8 +32,8 @@ allowed-tools: >
 
 You are the analyst. FactIQ provides authenticated **MCP tools** for the whole
 loop — discover the data (catalog, dataset/series search, read-only SQL, series
-lookup, market data, earnings-transcript search), then publish the result (`share_chart`,
-`share_report`). There is no server-side agent: you decompose the question, find
+lookup, market data, earnings-transcript and media-appearance search), then publish
+the result (`share_chart`, `share_report`). There is no server-side agent: you decompose the question, find
 the data with the MCP tools, do the math with your own tokens, then either
 answer directly in a sentence or author the output and publish it with a tool
 call.
@@ -144,7 +146,7 @@ All FactIQ tools are MCP tools provided by the `factiq` MCP server.
 | `get_market_data` (`function`, `symbol?`, `interval?`, `outputsize?`) | Quotes, daily/weekly/monthly series, fundamentals (OVERVIEW, INCOME_STATEMENT, EARNINGS), FX, commodities (WTI, BRENT, GOLD), SYMBOL_SEARCH. |
 | `get_geo_data` (`dataset`, `region`, `start_date`, `end_date`, `aggregation?`) | Satellite-derived signals, fetched live rather than stored as series: `fires_viirs` (crop burning/wildfires, ~3h lag; `aggregation="grid"` maps the fire's footprint), `no2_tropomi` / `so2_tropomi` / `co_tropomi` (industrial, coal/smelting, and combustion activity), `aerosol_index_tropomi` (smoke/dust/haze), `ndvi_s2` (crop condition), `precip_chirps` (rainfall), `temperature_power`, `soil_moisture_power` — aggregated over a country, state (`"India/Punjab"`), or bbox. **Read `references/data/satellite.md` before first use** — it covers windows (max 50 intervals; grid max 92 days), the `valid_obs_share` rule, and attribution. |
 | `search_earnings_transcripts` (`query`, `search_target?`, `company_filter?`, `quarter_filter?`, `claim_family?`, `section?`, `detail?`, `limit?`) | Lexical (not semantic) retrieval over atomic, quote-anchored earnings-call rows — never a raw transcript dump. For a non-empty `query`, strict websearch matches rank above an automatically broadened loose partial-match OR-of-tokens tier, so lower-ranked rows may match only some terms; trigram fallback runs only when full-text search returns no rows. Inspect every row for support and retry concise company-native vocabulary (`"capital expenditure"`, `"capex"`, segment names) before concluding lexical silence. For one-call notes, first use `search_target="coverage"`, choose its exact returned `latest_period`, then browse `claims` with `query=""`, that ticker + `quarter_filter`, `detail=true`, and a deliberate limit; fetch `pressure_points` with the same ticker and quarter. The browse is capped, not a promise of a complete call. Quote only `verbatim_quote`; `canonical_statement` is normalized, and neither `analyst_hypothesized` nor `mgmt_declined_to_confirm` is a management assertion. For filed XBRL actuals use `run_sql` on `sec`; for formal targets use `sec_guidance`. Full target/filter reference and workflows: `references/report-patterns/earnings-intelligence.md`. |
-| `search_media_appearances` (`query`, `search_target?`, `company_filter?`, `person?`, `sort?`, `date_from?`, `date_to?`, `limit?`) | What executives said **outside** earnings calls — podcasts, TV interviews, and conference appearances (9,000+ videos across 900+ listed companies, 2019–present). Unlike the other search tools this one is **question-driven, not keyword-driven**: a search agent on FactIQ's side takes your `query`, runs the transcript searches itself (iterating phrasings and synonyms), and returns paraphrased findings — person, date, one sentence on what was said, and a YouTube link that jumps to the moment it was said. So don't just pass a name — ask the actual question: `"What has Jamie Dimon said about recession risk?"`, `"Has any executive discussed GLP-1 drugs affecting their business?"`, `"How has Jensen Huang's framing of export controls changed over time?"`. Cross-company theme questions work as well as person-specific ones. Findings come back newest-first with dates, so evolving-position timelines fall out naturally. Each call takes ~10–30 s (the agent is searching, not doing one lookup) — put what you want to know into one well-phrased question rather than several fragments. Transcript text is never returned; treat findings as sourced leads and cite the timestamped links. Narrow with `company_filter` (ticker), `person` (name substring — everyday media names like `"Jensen Huang"` work), `date_from`/`date_to`, and `sort="newest"` when you want the latest statements specifically. `search_target="coverage"` lists which executives are covered (video counts, date span, hours of footage) — call it first when unsure a person or company is in the corpus. Free-plan usage is capped (200 searches or $5 of search compute per calendar month). Pairs with `search_earnings_transcripts`: that tool covers what management said **on the call**; this one covers what they say off-script — comparing the two surfaces tone shifts and detail that never reaches an earnings call. |
+| `search_media_appearances` (`query`, `search_target?`, `company_filter?`, `person?`, `sort?`, `appearance_type?`, `claim_family?`, `date_from?`, `date_to?`, `detail?`, `limit?`) | Deterministic, lexical retrieval over precomputed public-safe paraphrases of what executives said outside earnings calls; **no serving-time model** interprets or expands the query. Strict lexical FTS runs first, loose any-term FTS only when strict finds no candidates, and trigram fallback only when both FTS stages are empty. Prefer concise topical language and retry company-native synonyms before concluding silence. Canonical targets are `search` (default claims + passages blend), `claims`, `passages`, `pressure_points`, `appearances`, and `coverage`; compatibility aliases `all`, `videos`, and `companies` map respectively to `search`, `appearances`, and `coverage` and are not recommended for new calls. `sort="relevance"` ranks lexical score before publication date; `sort="newest"` ranks publication date before lexical score. `company_filter` accepts comma-separated primary tickers; `person` is a case-insensitive speaker-name substring; `appearance_type`, `claim_family`, inclusive `date_from`/`date_to`, `detail`, and `limit` provide further narrowing. Dates are the video's publication/upload date, not necessarily its recording/event date. `claim_family` makes blended search claims-only, is invalid with `passages`, and requires matching claims for catalog targets. Structured finding rows expose `result_kind`, `canonical_paraphrase`, speaker/topic/video metadata, relevance, and a timestamped YouTube URL; `appearances` returns video-level metadata, attribution, matching-claim count, URL, and relevance; `coverage` returns company-level structured corpus counts and date/channel inventory. `detail=true` adds normalized claim/attribution fields to finding rows, but never raw transcript text or evidence spans; claim-only fields remain null on passages and detail does not change catalog rows. Never put `canonical_paraphrase` in quotation marks or claim it is verbatim; follow the timestamped source when exact wording or tone matters. Empty-query behavior and the complete workflow are in `references/report-patterns/media-intelligence.md`. |
 | `search_news` (`query?`, `tickers?`, `topic?`, `sources?`, `start_date?`, `end_date?`, `sort?`, `limit?`) | Search FactIQ's curated business-news feed — public RSS headlines and summaries from Bloomberg, the Financial Times, and the Wall Street Journal, plus India-macro (Zerodha Daily Brief, ET HealthWorld) and global-health sources (WHO, ECDC, CDC, STAT News, KFF), aggregated and processed by FactIQ so each article carries the listed companies it names (`{symbol, exchange, country}`) and an `analysis` block: searchable keywords, a geography, and an `angle` — one sentence on why the story matters to an investor. Company stories get analysis too, not just macro ones; only content with no business read at all (sports, lifestyle, celebrity) comes back with `analysis: null`. Pivot from a story into data: company stories → `get_market_data` / `search_earnings_transcripts` / `run_sql` on `sec`; macro stories → `search_series` / `run_sql`. Results are headline + short publisher summary + link out, never full articles. `query` is lexical full-text over headline+summary — start with short concrete stems (`"obesity drug"`, `"rate cut"`); if a multi-word query matches nothing in full, the tool automatically retries matching ANY of the words with rare words ranked first, flagged as `meta.query_mode: "any_term"`, so one query attempt is usually enough. `tickers` matches share classes and cross-listings automatically (GOOG also finds GOOGL-tagged articles, TSM its Taiwan listing) — pass whichever symbol you know; most macro stories name no listed company, so zero ticker matches is a normal answer. `topic` is one of markets / economics / companies / technology / politics / world / energy / health / india / opinion — combined with a `query` it is a ranking preference (matching sections rank first, but strong matches from other sections still return, since stories often run outside their obvious feed); without a query it filters to the topic's feeds. `sort` is `"latest"` (default) or `"relevance"` (needs a query); `limit` 1–50 (default 20). Coverage is recent news (most feeds start late 2025), and the feed is continuously being expanded and improved — treat it as a current-events lens, not an archive. |
 | `get_style_guides` (`guides`) | FactIQ's house-style guides (`"chart"`, `"report"`, `"sql"`, `"earnings"`, or `"all"`). Optional; this skill's `references/` already cover the **publishing** JSON formats — use these guides for extra house-style detail. Fetch `"earnings"` before writing anything built from `search_earnings_transcripts` (quoting discipline, spoken-vs-filed sourcing). |
 
@@ -188,6 +190,39 @@ Quote only `verbatim_quote`; use `canonical_statement` unquoted. Treat
 `analyst_hypothesized` as the analyst’s framing and
 `mgmt_declined_to_confirm` as a refusal. Keep spoken call claims, formal
 `sec_guidance` targets, and filed `sec` actuals as separate source classes.
+
+#### Media target/filter quick reference
+
+| Target | Use and empty-query behavior |
+|---|---|
+| `search` | Default blend of high-signal claims and broad passage cards. Empty query browses recent high-signal claims only, without generic passages |
+| `claims` | Structured, decision-relevant executive claims. Empty query browses recent claims |
+| `passages` | Broader substantive topics not promoted to claims. Empty query browses recent passage cards |
+| `pressure_points` | Stored refusal / declined-to-confirm rows, not a complete interviewer-Q&A map. Empty query browses recent refusals |
+| `appearances` | Video-level title, channel, publication date, type, attribution, claim-count, URL, and relevance rows. Empty query browses the catalog |
+| `coverage` | Company-level structured corpus inventory: appearance/claim counts, date span, covered channels, and attribution status. Empty query returns the inventory |
+
+Use `all`, `videos`, and `companies` only when maintaining an older client;
+they are aliases for `search`, `appearances`, and `coverage`. For new work,
+use the canonical targets above. All targets accept `company_filter`, `person`,
+`appearance_type`, `claim_family` where compatible, publication-date
+`date_from`/`date_to`, and `limit`; finding targets also support `detail`.
+`claim_family` suppresses passage cards in `search` and cannot be combined
+with `passages`. Catalog rows are not expanded by `detail=true`.
+
+Start with `coverage` before absence claims. Use `search` plus
+`sort="relevance"` for a theme sweep, then drill into `claims` and
+`passages`. Use explicit `sort="newest"` plus date filters for a timeline.
+If a bounded result reaches 50 rows, narrow by ticker, person, target,
+appearance type, claim family, or date window; never query the gated
+`transcripts` schema, assume pagination, or ask for a full transcript.
+
+Media findings are sourced paraphrases. Attribute person, company/ticker when
+available, publication date, title/channel, and the timestamped link.
+`canonical_paraphrase` must stay outside quotation marks. Verify the linked
+source independently when exact wording or tone is material. For coverage,
+theme sweeps, timelines, cross-company work, and media-vs-earnings comparison,
+read `references/report-patterns/media-intelligence.md` before searching.
 
 ### Publishing
 
