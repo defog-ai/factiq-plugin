@@ -127,6 +127,12 @@ depending on what you ask for. You don't need the slash command: any
 economic or financial data question in a normal Claude Code or Codex
 conversation auto-invokes the skill.
 
+For an earnings question such as "What did Micron management say on its latest
+call?", the skill checks live transcript coverage first, pins the exact fiscal
+quarter, and then retrieves bounded management-claim and Q&A-pressure rows for
+that same call. It keeps spoken remarks separate from formal guidance and SEC
+filed actuals; the tool does not return a raw transcript.
+
 ## How it works
 
 **Your coding agent is the analyst**: it decomposes the question, finds the data, does 
