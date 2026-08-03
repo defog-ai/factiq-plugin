@@ -4,8 +4,9 @@ Turn your agent into a finance and economy analyst. This plugin for
 [Claude Code](https://code.claude.com/docs/en/plugins) and
 [Codex](https://github.com/openai/codex) gives the agent direct access to
 FactIQ's warehouse of official statistics — SEC filings, US, China, India, Korea, IMF,
-World Bank, and more — plus live market data, earnings-call transcripts, and
-satellite-derived data (fire detections, air-quality activity signals,
+World Bank, and more — plus live market data, earnings-call transcripts,
+executive media appearances, and satellite-derived data (fire detections,
+air-quality activity signals,
 rainfall, nighttime lights, shipping and port activity, reservoir levels).
 The agent discovers series, runs read-only SQL on FactIQ's database, computes 
 derived metrics, and publishes the result as a shareable FactIQ chart or report, 
@@ -133,6 +134,14 @@ quarter, and then retrieves bounded management-claim and Q&A-pressure rows for
 that same call. It keeps spoken remarks separate from formal guidance and SEC
 filed actuals; the tool does not return a raw transcript.
 
+For a media question such as "How has Jensen Huang discussed export controls
+outside earnings calls?", the skill checks company-level structured coverage,
+runs deterministic lexical retrieval with relevance ordering, and uses explicit
+newest ordering only for a timeline. Results are public-safe paraphrases with
+timestamped YouTube links, not quotations; the workflow verifies the linked
+source when exact wording or tone is material. A dedicated playbook also keeps
+media-vs-earnings comparisons aligned by company, person, topic, and date.
+
 ## How it works
 
 **Your coding agent is the analyst**: it decomposes the question, finds the data, does 
@@ -152,7 +161,8 @@ Codex talk to natively over a single OAuth connection.
 │  discover   search_datasets, describe_dataset, search_series,
 │             get_data_catalog
 │  fetch      run_sql (read-only), get_series, get_market_data,
-│             search_earnings_transcripts, search_news
+│             search_earnings_transcripts, search_media_appearances,
+│             search_news
 │  publish    share_chart, share_report
 └──────────────┬──────────────┘
                │
@@ -183,7 +193,7 @@ recipes live in [`references/data/sql-guide.md`](references/data/sql-guide.md).
 
 | Region | Schemas |
 |---|---|
-| United States | SEC filings data, BLS (employment, CPI, JOLTS, OEWS), Census (trade incl. HS-level, retail, housing), BEA (GDP, income), EIA (energy), USDA ERS, BTS (transportation), earnings-call transcripts |
+| United States | SEC filings data, BLS (employment, CPI, JOLTS, OEWS), Census (trade incl. HS-level, retail, housing), BEA (GDP, income), EIA (energy), USDA ERS, BTS (transportation), earnings-call transcripts, executive media appearances |
 | China | NBS macro indicators, GACC customs (HS-level trade) |
 | India | MOSPI (CPI, WPI, IIP, GDP), RBI (banking, rates, forex), DGCI&S trade (HS-level), Bengaluru road traffic (2026 onward, that one city only) |
 | South Korea | KCS customs (HS-level trade) |
@@ -206,7 +216,8 @@ Where the behavior lives — the files contributors will touch:
   report JSON (`report-spec.md`), and the bespoke-viz guide (`viz-guide.md`)
 - `references/report-patterns/` — domain playbooks (monetary policy,
   bilateral trade, bilateral economic policy, fiscal-policy revenue, business
-  formation). `report-patterns/README.md` is the single entry point SKILL.md
+  formation, earnings intelligence, media-appearance intelligence).
+  `report-patterns/README.md` is the single entry point SKILL.md
   references: it teaches the dialectical method (thesis → antithesis →
   synthesis) all reports follow and routes each domain to its playbook, so
   adding a playbook doesn't touch SKILL.md
