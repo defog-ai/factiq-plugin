@@ -1,0 +1,181 @@
+{
+  "columns": [
+    "claim_id",
+    "transcript_id",
+    "source_block_index",
+    "qa_turn_id",
+    "reporting_ticker",
+    "fiscal_period",
+    "calendar_date",
+    "claim_family",
+    "topic_path",
+    "subject",
+    "direction",
+    "value",
+    "unit",
+    "vs_prior",
+    "assertion_status",
+    "canonical_statement",
+    "verbatim_quote",
+    "speaker",
+    "speaker_role",
+    "section",
+    "relevance_score",
+    "source_link"
+  ],
+  "results": [
+    [
+      "NVDA::FY2026Q4::claim::ee56730959eec87fe1ce",
+      "NVDA::FY2026Q4",
+      25,
+      7,
+      "NVDA",
+      "FY2026Q4",
+      "2026-02-25",
+      "cost_margin_bridge",
+      "cost_margin.performance_driven_margin_sustainability",
+      "Gross-margin sustainability lever",
+      "flat",
+      "Generational performance-per-watt gains exceeding Moore's Law and performance-per-dollar gains exceeding system cost can sustain gross margins",
+      "performance per watt; performance per dollar",
+      null,
+      "company_asserted",
+      "NVIDIA can sustain gross margins long term by delivering generational performance-per-watt gains beyond Moore's Law and performance-per-dollar gains that materially exceed system cost.",
+      "The single most important lever of our gross margins is actually delivering generational leads to our customers. […] If we could deliver generationally performance per watt that exceeds dramatically what Moore's Law can do. If we can deliver performance per dollar dramatically more than the cost of our systems than the price of our systems, then we can continue to sustain our gross margins.",
+      "Jen-Hsun Huang",
+      "ceo",
+      "qa",
+      1.8343034386634827,
+      {
+        "source_type": "earnings_transcript",
+        "source_label": "NVIDIA Corp. (NVDA) FY2026Q4 earnings call transcript",
+        "source_url": "https://factiq.com/sources/transcripts/8dKXV_7N63LAkLrYLo14IOHxIffwNJ59jyvNITmxhZI",
+        "source_document_id": "NVDA::FY2026Q4",
+        "source_locator": {
+          "kind": "qa_turn",
+          "value": "7"
+        },
+        "source_precision": "anchored_turn",
+        "url_provenance": "factiq_permalink"
+      }
+    ],
+    [
+      "NVDA::FY2027Q1::claim::c0735a8757d9a842dd1f",
+      "NVDA::FY2027Q1",
+      2,
+      null,
+      "NVDA",
+      "FY2027Q1",
+      "2026-05-20",
+      "driver_attribution",
+      "cost_margin.gross_margin_path",
+      "gross margin mix",
+      "flat",
+      "GAAP gross margin 74.9%; non-GAAP gross margin 75%",
+      "%",
+      "largely flat sequentially",
+      "company_asserted",
+      "NVIDIA's Q1 GAAP gross margin was 74.9% and non-GAAP gross margin was 75%, largely flat sequentially because Blackwell systems accounted for most shipments.",
+      "GAAP gross margin was 74.9% and non-GAAP gross margins was 75%, largely flat sequentially by Blackwell systems continued to account for most of our shipments.",
+      "Colette Kress",
+      "cfo",
+      "prepared_remarks",
+      1.8251428604125977,
+      {
+        "source_type": "earnings_transcript",
+        "source_label": "NVIDIA Corp. (NVDA) FY2027Q1 earnings call transcript",
+        "source_url": "https://factiq.com/sources/transcripts/UHYT8DgDKZyMee1aC3H10aCdjoSDoKtUyuADZAp6f_U",
+        "source_document_id": "NVDA::FY2027Q1",
+        "source_locator": {
+          "kind": "transcript_block",
+          "value": "2"
+        },
+        "source_precision": "anchored_turn",
+        "url_provenance": "factiq_permalink"
+      }
+    ],
+    [
+      "NVDA::FY2026Q3::claim::f29f4e95190418227d11",
+      "NVDA::FY2026Q3",
+      27,
+      14,
+      "NVDA",
+      "FY2026Q3",
+      "2025-11-19",
+      "cost_margin_bridge",
+      "cost_margin.gross_margin_target",
+      "Next-year gross-margin target",
+      "flat",
+      "mid-seventies",
+      "%",
+      null,
+      "company_asserted",
+      "The company plans to use cost improvements, cycle-time gains, and mix to hold next-fiscal-year gross margins in the mid-seventies.",
+      "So we're taking all of that into account, but we do believe if we look at working again on cost improvements, cycle time, and mix, that we will work to try and hold at our gross margins in the mid-seventies. So that's our overall plan for gross margin.",
+      "Colette Kress",
+      "cfo",
+      "qa",
+      1.821022391319275,
+      {
+        "source_type": "earnings_transcript",
+        "source_label": "NVIDIA Corp. (NVDA) FY2026Q3 earnings call transcript",
+        "source_url": null,
+        "source_document_id": "NVDA::FY2026Q3",
+        "source_locator": {
+          "kind": "qa_turn",
+          "value": "14"
+        },
+        "source_precision": "anchored_turn",
+        "url_provenance": null
+      }
+    ],
+    [
+      "NVDA::FY2025Q2::claim::756a0876f28588fd6675",
+      "NVDA::FY2025Q2",
+      20,
+      6,
+      "NVDA",
+      "FY2025Q2",
+      "2024-08-28",
+      "cost_margin_bridge",
+      "cost_margin",
+      "Q4 gross-margin exit rate implied by annual margin",
+      "down",
+      "71% to 72%",
+      "%",
+      null,
+      "analyst_hypothesized",
+      "A full-year gross margin of approximately 75% implies a Q4 gross-margin exit rate of 71% to 72%.",
+      "If I have 75% for the year, I'd be something like 71% to 72% for Q4 somewhere in that range.",
+      "Stacy Rasgon",
+      "analyst",
+      "qa",
+      1.7834275364875793,
+      {
+        "source_type": "earnings_transcript",
+        "source_label": "NVIDIA Corp. (NVDA) FY2025Q2 earnings call transcript",
+        "source_url": "https://factiq.com/sources/transcripts/-fSbQKwekp0T2pmw3AGuFVwofqFl1IXpaXIji9Zjth8",
+        "source_document_id": "NVDA::FY2025Q2",
+        "source_locator": {
+          "kind": "qa_turn",
+          "value": "6"
+        },
+        "source_precision": "anchored_turn",
+        "url_provenance": "factiq_permalink"
+      }
+    ]
+  ],
+  "title": "Earnings Call Claims: gross margin",
+  "description": "Earnings-call claims search for: gross margin",
+  "organization": "Earnings-call claim graph",
+  "source": {
+    "country": "USA",
+    "organization_acronym": "EARNINGS",
+    "original_info": "transcripts | CLAIMS"
+  },
+  "company_tickers": [
+    "NVDA"
+  ],
+  "row_count": 4,
+  "truncated": false
+}
