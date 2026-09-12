@@ -372,8 +372,9 @@ previews.
    series where both exist.
 7. **Answer or render.** Direct-answer mode: reply with one sentence
    that states the number, period, and source. Quick-chart mode: build a
-   ChartSpec from wide-format data (see `references/output/chart-spec.md`), save
-   it to JSON, run `term_chart.py render`, and paste the preview into a fenced
+   ChartSpec from wide-format data (see `references/output/chart-spec.md`;
+   required keys are `title`, `type`, `xField`, `series`, `data`, and a y-axis
+   label goes in `yAxisLabel`), save it to JSON, run `term_chart.py render`, and paste the preview into a fenced
    code block. Report mode: build and save a report object (see
    `references/output/report-spec.md`), run `term_chart.py report`, and return
    the findings, local JSON path, and terminal previews.
