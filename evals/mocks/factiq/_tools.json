@@ -1,0 +1,336 @@
+{
+  "tools": [
+    {
+      "name": "get_data_catalog",
+      "description": "List the data sources FactIQ has, plus the shared table structure.\n\nCall this once before exploring. Returns the visible schemas (organization +\ncountry), the ones with no data loaded yet (`schemas_without_data` \u2014 skip\nthem), a per-schema dataset index, and the shared DDL for the `series`,\n`data_points`, `dimensions` and `compound_series` tables.\n\nschemas: optional comma-separated filter (e.g. \"bls,bea\").\nfull: heavy per-dataset descriptions instead of the compact index.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "full": {
+            "type": "boolean",
+            "default": false
+          },
+          "schemas": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "search_datasets",
+      "description": "Find datasets by keyword across every schema \u2014 the first discovery step.\n\nKeyword ranking (not semantic) over dataset titles and topics. Returns ranked\n{schema, dataset_code, title, topic}. Follow up with `describe_dataset` for\ndetail, or `run_sql` on the series/dimensions tables for exact series.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 15
+          },
+          "schemas": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "describe_dataset",
+      "description": "Full metadata for one dataset: topic, methodology, discontinuities,\nrelease dates, any base-change notice, plus the live dimensions and example\nseries. Call after `search_datasets` narrows you to a dataset.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "dataset_code"
+        ],
+        "properties": {
+          "schema": {
+            "type": "string"
+          },
+          "dataset_code": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "search_series",
+      "description": "Find series in one schema by title terms (substring match, not semantic).\n\nSupply already-decomposed terms; prefer short stems (e.g. \"rare\" over \"rare\nearth\"). Includes active COMPOUND:: series. For anything this misses, fall\nback to `run_sql` exploration on the `series` and `dimensions` tables.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "terms"
+        ],
+        "properties": {
+          "schema": {
+            "type": "string"
+          },
+          "terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "default": 15
+          },
+          "include_compound": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      }
+    },
+    {
+      "name": "run_sql",
+      "description": "Run a read-only SELECT against the FactIQ data warehouse, scoped to one\nschema \u2014 the power tool for joins, pivots and aggregation.\n\nRead-only role, 30s statement timeout, with FactIQ's query transforms and\nseries-metadata enrichment. Resolve ids from `series` before filtering\n`data_points`. `auto_retry=true` opts into a server-side reviser on zero\nrows.\n\nReturns at most 50 rows. If the query matches more, the result is flagged\n`\"truncated\": true` \u2014 that is your cue to aggregate or compute in SQL\n(`GROUP BY`, `date_trunc`, a SUM/AVG/rank/ratio) and return that, NOT to try\nto fetch the raw rows.\n\nYear-over-year and other period comparisons must join on the calendar\nperiod (`date_trunc('month', prior.time) = date_trunc('month', cur.time) -\ninterval '1 year'` \u2014 the stored day of the month varies by source, so never\ncompare exact dates), never on a row offset such as\n`LAG(value, 12) OVER (ORDER BY time)`: a series with one missing month\ncompares the wrong periods for the twelve rows after the gap (LEAD: the\ntwelve before it) and the numbers still look plausible. For one series prefer\n`get_series` with `transform`. When the result carries a `coverage_note`, the\nrows have periods with no observation (listed in `missing_periods`, per\nseries): name them in the answer, do not interpolate, and label any aggregate\nthat spans them as partial.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "sql"
+        ],
+        "properties": {
+          "schema": {
+            "type": "string"
+          },
+          "sql": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string",
+            "default": ""
+          },
+          "explore": {
+            "type": "boolean",
+            "default": false
+          },
+          "auto_retry": {
+            "type": "boolean",
+            "default": false
+          },
+          "page": {
+            "type": "integer",
+            "default": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "get_series",
+      "description": "Fetch one series' data: timeseries, tabular, or COMPOUND:: all work.\n\nReturns title, units, frequency, notes and data points, with source metadata.\n`transform=\"yoy_pct\"` (percent change) or `\"yoy_diff\"` (difference, for rates)\nadds a column with the change versus the same period one year earlier,\nmatched by calendar date \u2014 use it for inflation or growth from one series\ninstead of a `LAG(value, 12)` query, which goes wrong after any missing\nmonth. The cell is null where the prior-year period is absent, and\n`transform.periods_without_prior` lists those periods.\nIf the result carries a `coverage_note`, the series has periods with no\nobservation (listed in `missing_periods`): say so in the answer, leave them\nblank rather than interpolating, and label any aggregate that spans them\nas partial.\nAt most 50 points come back; if the series is longer the result is flagged\n`\"truncated\": true` \u2014 narrow it with `from_year`/`to_year`, or pull the series\nthrough `run_sql` with an aggregation rather than trying to fetch every point.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "series_id"
+        ],
+        "properties": {
+          "schema": {
+            "type": "string"
+          },
+          "series_id": {
+            "type": "string"
+          },
+          "from_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "to_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "transform": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        }
+      }
+    },
+    {
+      "name": "get_style_guides",
+      "description": "Fetch FactIQ's house-style authoring guides so anything you build matches\nFactIQ's conventions and look. Call this before producing a chart, a report,\nor written analysis from FactIQ data, and follow what it returns.\n\nPass any combination of \"chart\", \"report\", \"sql\", \"earnings\", or \"all\".\nReturns each requested guide's markdown text, keyed by name. This is free \u2014\nit does not count against your tool quota.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "guides"
+        ],
+        "properties": {
+          "guides": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "search_earnings_transcripts",
+      "description": "Search earnings-call intelligence from live calls,\ndecomposed into atomic, quote-anchored claims and Q&A pressure points \u2014 never\na raw transcript dump.\n\nRetrieval for \"claims\" and \"pressure_points\" is lexical, not semantic. A\nnonempty query uses an OR-of-tokens full-text candidate set; strict\nwebsearch_to_tsquery matches receive a fixed ranking boost, so strict matches\nrank ahead of loose partial-term matches. Lower-ranked rows may match only\nsome query terms. If that filtered full-text search returns no rows, a trigram\nfallback handles typos and sub-word variants. Quoted phrases use websearch\nsyntax, but synonyms are not inferred: try the company's own vocabulary\n(\"capex\" and \"capital expenditure\", segment names, abbreviations). An empty\nor partial result is not proof that management did not discuss a topic;\ncoverage and vocabulary both matter.\n\nTarget and filter semantics:\n- \"claims\" (default) searches or browses normalized management/analyst claim\n  rows. ticker, quarter_filter, claim_family, section, detail, and\n  limit apply. claim_family matches primary or secondary families; section is\n  \"prepared_remarks\" or \"qa\". Base rows include direction/value/unit where\n  checkable, assertion_status, canonical_statement, verbatim_quote, speaker,\n  speaker_role, section, transcript_id, source_block_index, qa_turn_id, and a\n  source_link object.\n- \"pressure_points\" searches or browses what analysts pressed for and whether\n  management confirmed, declined, deflected, or partially answered. ticker,\n  quarter_filter, claim_family (the linked family), detail, and limit apply.\n  section is ignored because every pressure point is from Q&A. Base rows\n  include specific_ask, response_quality, refused_number, linked_family,\n  linked_claim_id, verbatim_quote, transcript_id, source_block_index,\n  qa_turn_id, and a source_link object.\n- \"disclosure_profile\" is a direct company lookup, not text search. The ticker\n  is the first ticker value, or query when ticker is empty.\n  Profiles are curated separately from transcript coverage, so a covered company\n  may not have one; availability is \"available\" or \"unavailable\" accordingly.\n  quarter_filter, claim_family, section, detail, and limit do not narrow it.\n- \"coverage\" is corpus inventory, not text search. ticker and limit\n  apply; query, quarter_filter, claim_family, section, and detail do not narrow\n  it. Rows report calls_covered, earliest_period, latest_period,\n  latest_call_date, claims, and pressure_points.\n\nAn empty query is a capped browse, not a completeness guarantee. Rows are\nordered by newest fiscal period/call and then source-block (spoken) order\nwithin one call. Every response is limited to at most 50 rows, and a browse\nthat reaches its limit may omit additional rows even if no truncation flag is\npresent. For a latest-call note: (1) call \"coverage\" with one ticker, (2) read\nlatest_period, (3) call \"claims\" with that ticker, quarter_filter=latest_period,\nquery=\"\", detail=true, and a deliberate limit, then (4) call\n\"pressure_points\" with the same ticker and quarter. Treat both browses as\ncapped evidence, not a complete transcript. Narrow large result sets with\nticker, quarter, target, claim_family, and (for claims) section; the restricted\n`transcripts` schema cannot be queried through run_sql.\n\nEvidence rules: canonical_statement is normalized and must not be quoted as\nverbatim. Quote only verbatim_quote, with its speaker, role, ticker, and fiscal\nperiod. A [\u2026] inside verbatim_quote marks omitted transcript sentences between\nnon-adjacent evidence spans: preserve it exactly when quoting, and never\npresent text on either side of it as one continuous statement. When a quote is used, render source_link.source_label as the Markdown\nlink text for source_link.source_url beside the claim. The label names the\ncompany, fiscal period, and earnings call transcript; never replace it with an\ningestion vendor. Do not make a second call just to find a citation, do not\ninvent a replacement when source_url is null, and do not call a document-level\nlink exact context. source_locator still identifies the stored transcript block\nor Q&A turn. assertion_status is load-bearing: analyst_hypothesized is the\nanalyst's framing, while mgmt_declined_to_confirm is a refusal, not a management\nassertion. Spoken call claims are a different source class from filed XBRL\nactuals (`run_sql` on the `sec` schema) and formally issued targets (the\n`sec_guidance` dataset); label them separately.\n\nExamples:\n- Latest call: search_earnings_transcripts(query=\"\", search_target=\"coverage\",\n  ticker=\"MU\"), then repeat with search_target=\"claims\",\n  quarter_filter=<latest_period>, detail=true, limit=50, and finally with\n  search_target=\"pressure_points\" for the same ticker and quarter.\n- Cross-company theme: search_earnings_transcripts(query=\"capital expenditure\n  capacity\", search_target=\"claims\", ticker=\"MU,NVDA\", detail=true);\n  inspect each returned row for topical support, do not assume every term\n  matched, and retry vocabulary as needed.\n- Disclosure habits: search_earnings_transcripts(query=\"\",\n  search_target=\"disclosure_profile\", ticker=\"MU\").\n\nclaim_family codes: driver_attribution, forward_conviction, prior_view_revision, strategic_agreement, pricing_mechanics, demand_magnitude, capacity_milestone, competitive_positioning, cohort_behavior, cost_margin_bridge, capital_allocation, stated_risk_constraint, qa_dynamics, regulatory_policy, pipeline_backlog, commodity_hedging, ma_deal, labor_org.\nTopic paths (topic_path column) are rooted at: demand, supply_capacity, pricing, cost_margin, capital, competition, customer, product_roadmap, risk, governance.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string",
+            "default": "",
+            "description": "For claims/pressure_points: lexical websearch text; strict matches rank above loose partial-term matches, with trigram fallback only when FTS returns no rows. Empty text browses capped rows. For disclosure_profile, it can supply the ticker when ticker is empty. Ignored by coverage."
+          },
+          "search_target": {
+            "type": "string",
+            "default": "claims",
+            "enum": [
+              "claims",
+              "pressure_points",
+              "disclosure_profile",
+              "coverage"
+            ],
+            "description": "claims or pressure_points perform lexical retrieval/browse; disclosure_profile is a direct company lookup; coverage is corpus inventory."
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Ticker, or a comma-separated list of tickers, for claims, pressure_points, and coverage; case-insensitive. Company names belong in company_name; pass only one of the two. A name passed here is still read as a name when it fits a stored company, and the response says so. The response lists possible matches for a value that is not in the transcript corpus. disclosure_profile uses only the first ticker."
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Company name, or a comma-separated list of names, for claims, pressure_points, and coverage; case-insensitive ('nvidia', 'HP Inc', 'Ford Motor'). Each name resolves to the stored ticker(s) that match it best; the response reports the resolution and lists possible matches for a name that resolved to nothing. Pass either company_name or ticker, not both. disclosure_profile uses only the first resolved ticker."
+          },
+          "quarter_filter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact fiscal period such as FY2026Q3; applies to claims and pressure_points. Ignored by disclosure_profile and coverage. Pin this after coverage for a single-call browse."
+          },
+          "claim_family": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Claim-family code. Matches primary/secondary families on claims and the linked family on pressure_points; ignored by disclosure_profile and coverage."
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "prepared_remarks",
+                  "qa"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "prepared_remarks or qa; applies only to claims. Ignored for pressure_points because those rows are all Q&A, and ignored by lookup/inventory targets."
+          },
+          "detail": {
+            "type": "boolean",
+            "default": false,
+            "description": "For claims, add structured_fields, secondary_families, period, time_horizon, conviction_qualifier, denominator, and falsifiable; for pressure_points, add tone_note. Ignored by disclosure_profile and coverage. The extractor's quantified flag is not published: it only records that the extractor wrote something into value, which the caller can already see in value itself."
+          },
+          "limit": {
+            "type": "integer",
+            "default": 15,
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Maximum 1-50 rows (default 15). This is a hard cap, not proof the result is complete; narrow by ticker, quarter, target, family, and claims section."
+          },
+          "company_filter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Deprecated alias of ticker, kept for clients installed before the parameter was renamed. Pass ticker instead."
+          }
+        }
+      }
+    }
+  ]
+}
