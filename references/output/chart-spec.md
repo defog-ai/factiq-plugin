@@ -6,9 +6,13 @@ lineage remain available with the rendered preview.
 
 ## Minimal valid spec
 
-Required: `id`, `title`, `type`, `xField` (object with `key`), `series`
+Required: `title`, `type`, `xField` (object with `key`), `series`
 (array), `data` (wide-format rows — one object per x value, one key per
 series).
+
+Optional: `id` (a short slug; no tool reads it) and `yAxisLabel` (a plain
+string such as `"Percent"`). Write the y-axis label as `yAxisLabel`, not as a
+`yAxis` object.
 
 ```json
 {
@@ -114,6 +118,9 @@ Rules:
   Use `derived` for computed metrics (YoY, indexed, ratios).
 - `annotations[]`: `{date: "2020-04-01", text: "..."}` — use sparingly to
   mark events the narrative references.
+- `yAxisLabel`: a string naming the y-axis unit, e.g. `"Percent"`. There is
+  no `yAxis` object.
+- `id`: optional slug for your own reference; nothing reads it.
 - `subtitle`, `description`, `notes[]`, `footnote` — optional supporting
   text.
 

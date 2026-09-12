@@ -122,6 +122,45 @@ class PeriodAlignmentDocumentationTests(unittest.TestCase):
         self.assertNotIn("12-month difference", calc)
 
 
+class ChartSpecRequiredKeysTests(unittest.TestCase):
+    """The renderer reads no `id` and no y-axis key, so the docs must not
+    require `id` and must name one y-axis label form."""
+
+    def test_id_is_not_a_required_key(self):
+        required = CHART_SPEC.split("Required:", 1)[1].split("\n\n", 1)[0]
+        self.assertNotIn("`id`", required)
+        self.assertNotIn("`id`", SKILL.split("required keys are", 1)[1].split(")", 1)[0])
+
+    def test_y_axis_label_form_is_stated(self):
+        optional = CHART_SPEC.split("Optional:", 1)[1].split("\n\n", 1)[0]
+        self.assertIn("`yAxisLabel`", optional)
+        self.assertIn("not as a\n`yAxis` object", optional)
+
+    def test_renderer_accepts_a_spec_without_id(self):
+        spec = {
+            "title": "US unemployment rose from 3.7% to 4.3%",
+            "type": "line",
+            "xField": {"key": "time"},
+            "series": [{"key": "rate"}],
+            "yAxisLabel": "Percent",
+            "data": [
+                {"time": "2024-01-01", "rate": 3.7},
+                {"time": "2024-02-01", "rate": 3.9},
+                {"time": "2024-03-01", "rate": 4.3},
+            ],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "chart.json"
+            path.write_text(json.dumps(spec), encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(SCRIPTS / "term_chart.py"), "render",
+                 "--spec", str(path), "--charset", "ascii", "--color", "never"],
+                capture_output=True, text=True,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("US unemployment rose", result.stdout)
+
+
 def monthly_payload(start_year: int, end_year: int, missing: str) -> dict:
     rows = []
     level = 100.0
