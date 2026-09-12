@@ -1,0 +1,355 @@
+{
+  "search_target": "facts",
+  "company": {
+    "canonical_name": "PACKAGING CORP OF AMERICA",
+    "tickers": [
+      "PKG"
+    ],
+    "ticker_sources": {
+      "PKG": "sec"
+    },
+    "identifiers": [
+      "SEC_CIK:0000075677"
+    ]
+  },
+  "query": "",
+  "query_mode": "concept",
+  "query_terms": [],
+  "concept_resolution": {
+    "requested": "revenue",
+    "selected": "Revenue",
+    "path": "Company Filings > Financial Statements > Income Statement > Revenue",
+    "available_fact_count": 808,
+    "other_matches": [
+      {
+        "name": "Revenue (excluding assessed tax)",
+        "path": "Company Filings > Financial Statements > Income Statement > Revenue (excluding assessed tax)",
+        "available_fact_count": 11
+      },
+      {
+        "name": "Revenue from contracts with customers (excluding tax)",
+        "path": "Company Filings > XBRL us-gaap > Revenue from contracts with customers (excluding tax)",
+        "available_fact_count": 13
+      }
+    ],
+    "anchor_group": {
+      "anchor": "Revenue",
+      "grouped_tag_count": 135,
+      "note": "Filings record this metric under several XBRL tags across years; results include all of them."
+    }
+  },
+  "tree": {
+    "type": "company",
+    "name": "PACKAGING CORP OF AMERICA",
+    "children": [
+      {
+        "type": "metric_class",
+        "name": "Segment",
+        "children": [
+          {
+            "type": "concept",
+            "name": "Revenue",
+            "path": "Company Filings > Financial Statements > Income Statement > Revenue",
+            "children": [
+              {
+                "type": "series",
+                "name": "Packaging (reported line 2) (Quarterly)",
+                "dimension": {
+                  "axis": "us-gaap:StatementBusinessSegmentsAxis",
+                  "member": "Packaging",
+                  "additional_axes": [
+                    {
+                      "axis": "factiq:ReportedLineAxis",
+                      "member": "factiq:ReportedLine2Member",
+                      "member_name": "Reported line 2"
+                    }
+                  ]
+                },
+                "children": [
+                  {
+                    "type": "fact",
+                    "period": "2026-04-01 to 2026-06-30",
+                    "period_basis": "quarterly",
+                    "value": 2311300000.0,
+                    "unit": "USD",
+                    "observation_kind": "reported",
+                    "source_link": {
+                      "source_type": "sec_filing",
+                      "source_label": "PACKAGING CORP OF AMERICA FY2026 Q2 10-Q",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm",
+                      "source_document_id": "0001193125-26-339405",
+                      "source_locator": {
+                        "kind": "document",
+                        "value": "0001193125-26-339405"
+                      },
+                      "source_precision": "document",
+                      "source_provider": "SEC EDGAR",
+                      "url_provenance": "stored"
+                    },
+                    "reported_in": {
+                      "fiscal_year": 2026,
+                      "fiscal_period": "Q2",
+                      "report_type": "quarterly",
+                      "form_type": "10-Q",
+                      "published_at": "2026-08-07",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm"
+                    }
+                  },
+                  {
+                    "type": "fact",
+                    "period": "2025-04-01 to 2025-06-30",
+                    "period_basis": "quarterly",
+                    "value": 2005900000.0,
+                    "unit": "USD",
+                    "observation_kind": "reported",
+                    "source_link": {
+                      "source_type": "sec_filing",
+                      "source_label": "PACKAGING CORP OF AMERICA FY2026 Q2 10-Q",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm",
+                      "source_document_id": "0001193125-26-339405",
+                      "source_locator": {
+                        "kind": "document",
+                        "value": "0001193125-26-339405"
+                      },
+                      "source_precision": "document",
+                      "source_provider": "SEC EDGAR",
+                      "url_provenance": "stored"
+                    },
+                    "reported_in": {
+                      "fiscal_year": 2026,
+                      "fiscal_period": "Q2",
+                      "report_type": "quarterly",
+                      "form_type": "10-Q",
+                      "published_at": "2026-08-07",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "series",
+                "name": "Packaging × Intersegment (Quarterly)",
+                "dimension": {
+                  "axis": "us-gaap:StatementBusinessSegmentsAxis",
+                  "member": "Packaging",
+                  "additional_axes": [
+                    {
+                      "axis": "srt:ProductOrServiceAxis",
+                      "member": "pkg:IntersegmentMember",
+                      "member_name": "Intersegment"
+                    }
+                  ]
+                },
+                "children": [
+                  {
+                    "type": "fact",
+                    "period": "2026-04-01 to 2026-06-30",
+                    "period_basis": "quarterly",
+                    "value": 2000000.0,
+                    "unit": "USD",
+                    "observation_kind": "reported",
+                    "source_link": {
+                      "source_type": "sec_filing",
+                      "source_label": "PACKAGING CORP OF AMERICA FY2026 Q2 10-Q",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm",
+                      "source_document_id": "0001193125-26-339405",
+                      "source_locator": {
+                        "kind": "document",
+                        "value": "0001193125-26-339405"
+                      },
+                      "source_precision": "document",
+                      "source_provider": "SEC EDGAR",
+                      "url_provenance": "stored"
+                    },
+                    "reported_in": {
+                      "fiscal_year": 2026,
+                      "fiscal_period": "Q2",
+                      "report_type": "quarterly",
+                      "form_type": "10-Q",
+                      "published_at": "2026-08-07",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm"
+                    }
+                  },
+                  {
+                    "type": "fact",
+                    "period": "2025-04-01 to 2025-06-30",
+                    "period_basis": "quarterly",
+                    "value": 0.0,
+                    "unit": "USD",
+                    "observation_kind": "reported",
+                    "source_link": {
+                      "source_type": "sec_filing",
+                      "source_label": "PACKAGING CORP OF AMERICA FY2026 Q2 10-Q",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm",
+                      "source_document_id": "0001193125-26-339405",
+                      "source_locator": {
+                        "kind": "document",
+                        "value": "0001193125-26-339405"
+                      },
+                      "source_precision": "document",
+                      "source_provider": "SEC EDGAR",
+                      "url_provenance": "stored"
+                    },
+                    "reported_in": {
+                      "fiscal_year": 2026,
+                      "fiscal_period": "Q2",
+                      "report_type": "quarterly",
+                      "form_type": "10-Q",
+                      "published_at": "2026-08-07",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "series",
+                "name": "Packaging × Operating Segments (Quarterly)",
+                "dimension": {
+                  "axis": "us-gaap:StatementBusinessSegmentsAxis",
+                  "member": "Packaging"
+                },
+                "children": [
+                  {
+                    "type": "fact",
+                    "period": "2026-04-01 to 2026-06-30",
+                    "period_basis": "quarterly",
+                    "value": 2311300000.0,
+                    "unit": "USD",
+                    "observation_kind": "reported",
+                    "source_link": {
+                      "source_type": "sec_filing",
+                      "source_label": "PACKAGING CORP OF AMERICA FY2026 Q2 10-Q",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm",
+                      "source_document_id": "0001193125-26-339405",
+                      "source_locator": {
+                        "kind": "document",
+                        "value": "0001193125-26-339405"
+                      },
+                      "source_precision": "document",
+                      "source_provider": "SEC EDGAR",
+                      "url_provenance": "stored"
+                    },
+                    "reported_in": {
+                      "fiscal_year": 2026,
+                      "fiscal_period": "Q2",
+                      "report_type": "quarterly",
+                      "form_type": "10-Q",
+                      "published_at": "2026-08-07",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm"
+                    }
+                  },
+                  {
+                    "type": "fact",
+                    "period": "2025-04-01 to 2025-06-30",
+                    "period_basis": "quarterly",
+                    "value": 2005900000.0,
+                    "unit": "USD",
+                    "observation_kind": "reported",
+                    "source_link": {
+                      "source_type": "sec_filing",
+                      "source_label": "PACKAGING CORP OF AMERICA FY2026 Q2 10-Q",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm",
+                      "source_document_id": "0001193125-26-339405",
+                      "source_locator": {
+                        "kind": "document",
+                        "value": "0001193125-26-339405"
+                      },
+                      "source_precision": "document",
+                      "source_provider": "SEC EDGAR",
+                      "url_provenance": "stored"
+                    },
+                    "reported_in": {
+                      "fiscal_year": 2026,
+                      "fiscal_period": "Q2",
+                      "report_type": "quarterly",
+                      "form_type": "10-Q",
+                      "published_at": "2026-08-07",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "series",
+                "name": "Packaging × Trade (Quarterly)",
+                "dimension": {
+                  "axis": "us-gaap:StatementBusinessSegmentsAxis",
+                  "member": "Packaging",
+                  "additional_axes": [
+                    {
+                      "axis": "srt:ProductOrServiceAxis",
+                      "member": "pkg:TradeMember",
+                      "member_name": "Trade"
+                    }
+                  ]
+                },
+                "children": [
+                  {
+                    "type": "fact",
+                    "period": "2026-04-01 to 2026-06-30",
+                    "period_basis": "quarterly",
+                    "value": 2309300000.0,
+                    "unit": "USD",
+                    "observation_kind": "reported",
+                    "source_link": {
+                      "source_type": "sec_filing",
+                      "source_label": "PACKAGING CORP OF AMERICA FY2026 Q2 10-Q",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm",
+                      "source_document_id": "0001193125-26-339405",
+                      "source_locator": {
+                        "kind": "document",
+                        "value": "0001193125-26-339405"
+                      },
+                      "source_precision": "document",
+                      "source_provider": "SEC EDGAR",
+                      "url_provenance": "stored"
+                    },
+                    "reported_in": {
+                      "fiscal_year": 2026,
+                      "fiscal_period": "Q2",
+                      "report_type": "quarterly",
+                      "form_type": "10-Q",
+                      "published_at": "2026-08-07",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm"
+                    }
+                  },
+                  {
+                    "type": "fact",
+                    "period": "2025-04-01 to 2025-06-30",
+                    "period_basis": "quarterly",
+                    "value": 2005900000.0,
+                    "unit": "USD",
+                    "observation_kind": "reported",
+                    "source_link": {
+                      "source_type": "sec_filing",
+                      "source_label": "PACKAGING CORP OF AMERICA FY2026 Q2 10-Q",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm",
+                      "source_document_id": "0001193125-26-339405",
+                      "source_locator": {
+                        "kind": "document",
+                        "value": "0001193125-26-339405"
+                      },
+                      "source_precision": "document",
+                      "source_provider": "SEC EDGAR",
+                      "url_provenance": "stored"
+                    },
+                    "reported_in": {
+                      "fiscal_year": 2026,
+                      "fiscal_period": "Q2",
+                      "report_type": "quarterly",
+                      "form_type": "10-Q",
+                      "published_at": "2026-08-07",
+                      "source_url": "https://www.sec.gov/Archives/edgar/data/75677/000119312526339405/pkg-20260630.htm"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "result_count": 8,
+  "truncated": false
+}
