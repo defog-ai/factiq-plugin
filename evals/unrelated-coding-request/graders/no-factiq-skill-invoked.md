@@ -1,6 +1,7 @@
 ---
 type: tool_used
-tool: mcp__plugin_factiq_factiq__get_series
+tool: Skill
+input_match: factiq
 min: 0
 max: 0
 weight: 1

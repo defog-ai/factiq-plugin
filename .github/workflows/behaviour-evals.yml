@@ -1,0 +1,68 @@
+name: Behaviour evals
+
+# The behaviour suite in evals/ runs a real model against the skill, so it
+# costs money (about 25 US dollars for a full two-arm run at three runs per
+# case) and takes about half an hour. It does not run on every push. Start it
+# by hand from the Actions tab when a change touches skills/, scripts/,
+# references/ or evals/, and pick the model and the pass threshold there.
+#
+# The job needs an ANTHROPIC_API_KEY repository secret.
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Model for the agent under test
+        default: opus
+        required: true
+      runs:
+        description: Runs per case (each case's own default is 3)
+        default: "3"
+        required: true
+      threshold:
+        description: Fail if any with-plugin case scores below this (0..1)
+        default: "0.8"
+        required: true
+      case:
+        description: Optional case-name glob, for example yoy-* (blank runs every case)
+        default: ""
+        required: false
+      skip_baseline:
+        description: Run only the with-plugin arm
+        type: boolean
+        default: false
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Claude Code and the shell sandbox packages
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap socat
+          claude --version
+      - name: Run the suite twice, with the plugin and against the tools-only baseline
+        run: |
+          args=(--model "${{ inputs.model }}" --judge-model sonnet
+                --runs "${{ inputs.runs }}" --threshold "${{ inputs.threshold }}"
+                --concurrency 4 --output-dir evals/results/ci)
+          if [ -n "${{ inputs.case }}" ]; then args+=(--case "${{ inputs.case }}"); fi
+          if [ "${{ inputs.skip_baseline }}" = "true" ]; then args+=(--skip-baseline); fi
+          python3 evals/run_ablation.py "${args[@]}"
+      - name: Show the comparison
+        if: always()
+        run: cat evals/results/ci/comparison.md || true
+      - name: Keep the results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: behaviour-eval-results
+          path: evals/results/ci
