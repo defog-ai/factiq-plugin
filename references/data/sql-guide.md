@@ -112,6 +112,27 @@ SELECT series_id, time, value FROM data_points
 WHERE series_id IN ('...', '...')
 ```
 
+## India CPI freshness and source choice
+
+For the newest India CPI observation, check `rbi.rbi-prices_wages` as well as
+`mospi.mospi_cpi`. RBI republishes MoSPI CPI and may carry newer General-index
+observations in the warehouse; use MoSPI for item detail. Neither source is
+always fresher. Compare `search_datasets`' cached `latest_period_end` and
+`freshness.status` before selecting a source, then verify the exact series,
+national geography, rural/urban/combined sector, units and base year.
+
+The dataset-wide maximum does not guarantee every constituent series is equally
+current (the RBI prices/wages dataset also contains non-CPI series). It is an
+observation period, not a publication date. `freshness.refreshed_at` is the metadata
+refresh time; stale or unavailable metadata cannot establish the latest release.
+`describe_dataset` reports source publication dates/cadence only where available,
+with nulls otherwise. Do not infer them from observation timestamps.
+
+Compare equivalent monthly periods with `date_trunc('month', ...)`: MoSPI may
+use month-start and RBI month-end for the same month. Do not rank the latter as a
+newer monthly print merely because its day is later. Preserve the CPI 2012/2024
+base-change guidance; never splice reclassified sub-aggregates across bases.
+
 ## National vs. sub-national series — the classic trap
 
 Geographically decomposed datasets are dominated by state/region rows; the

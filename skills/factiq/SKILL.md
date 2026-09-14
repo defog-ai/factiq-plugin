@@ -110,8 +110,8 @@ All FactIQ tools are MCP tools provided by the `factiq` MCP server.
 | Tool | Purpose |
 |---|---|
 | `get_data_catalog` (`schemas?`, `full?`) | Per-schema index + the shared table DDL. **Call once per session before anything else.** `full=true` returns the heavy per-dataset dump (rarely needed — use `describe_dataset`). Schemas listed under `schemas_without_data` have no rows — skip them. |
-| `search_datasets` (`query`, `schemas?`, `limit?`) | Keyword (not semantic) ranking of datasets across all schemas. **The first discovery step** — find the right `schema` + `dataset_code`. |
-| `describe_dataset` (`schema`, `dataset_code`) | Full metadata for one dataset: topic, methodology, release dates, base-change notice, dimensions, example series. Call after `search_datasets`. |
+| `search_datasets` (`query`, `schemas?`, `limit?`) | Keyword (not semantic) ranking of datasets across all schemas. **The first discovery step** — find the right `schema` + `dataset_code`. Also returns cached `latest_period_end` (dataset MAX of series.end_time; null if unavailable) and `freshness` (status, refreshed_at, source). Ranking remains relevance-based. |
+| `describe_dataset` (`schema`, `dataset_code`) | Full metadata for one dataset: topic, methodology, base-change notice, dimensions, example series, plus the same `latest_period_end` and `freshness`. Publication fields `last_release_date`, `next_release_date`, `release_cadence` are null where unavailable; `release_metadata` identifies availability and source URL. Call after `search_datasets`. |
 | `search_series` (`schema`, `terms`, `limit?`, `include_compound?`) | Series-level title-substring search within one schema (`terms` is a list — prefer short stems). Includes `COMPOUND::` series. |
 | `run_sql` (`schema`, `sql`, `question?`, `explore?`, `auto_retry?`, `page?`) | Read-only SELECT against one schema. The power tool for joins, pivots, aggregation. `page` works on the `nasa_fires` schema only, where individual rows are the answer; everywhere else, aggregate. |
 | `get_series` (`schema`, `series_id`, `from_year?`, `to_year?`, `transform?`) | Fetch one series — timeseries, tabular, or `COMPOUND::` ids all work. `transform="yoy_pct"` (percent change) or `"yoy_diff"` (difference, for rates) adds a column with the change versus the same period one year earlier, matched by calendar date; the cell is null where that period is absent. A `coverage_note` with `missing_periods` means the series skips a period — disclose it. SEC-backed results include `row_sources` keyed by `result_index`, with the supporting filing, accession/form/date, reported-vs-derived status, and a standardized `source_link`. For those series `schema="filings"` and `schema="sec"` return the same result. |
@@ -295,6 +295,16 @@ previews.
    prefer short stems like `rare`, not `rare earth`) or exploration SQL
    (`run_sql` with `explore=true`) on the `series` and `dimensions` tables.
    For multi-source stories, actually fetch data from 2+ schemas.
+   For the newest India CPI observation, compare `rbi.rbi-prices_wages` and
+   `mospi.mospi_cpi`: RBI republishes MoSPI CPI and may carry newer General-index
+   observations; use MoSPI for item detail. Compare monthly periods using
+   `date_trunc('month', ...)`, since month-start and month-end can mean the same
+   month. A dataset-wide maximum does not guarantee every constituent series is
+   equally current; verify the selected series, sector and base year. Freshness
+   refreshes in the background about hourly, is unavailable before a successful
+   refresh, and is marked stale on failure or after two hours. Observation periods,
+   publication dates and `freshness.refreshed_at` are distinct; do not infer a
+   release date from either timestamp.
    Satellite-derived series live in two schemas: `portwatch` (daily shipping —
    chokepoints, ports, country trade estimates) and `satellite` (nighttime
    lights by state, lake/reservoir water levels) — see
