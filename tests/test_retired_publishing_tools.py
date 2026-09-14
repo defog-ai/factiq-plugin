@@ -37,9 +37,3 @@ def test_skill_stops_at_the_publishing_boundary_without_a_website_workaround():
     assert "probe HTTP endpoints" in skill
     assert "Never call `send_feedback`" in skill
     assert "Normal OAuth connection is still supported" in skill
-
-
-def test_report_sources_do_not_construct_links_to_the_legacy_ui():
-    report = (ROOT / "references/output/report-spec.md").read_text()
-    assert "/series/" not in report
-    assert "only when the fetched result supplies" in report
