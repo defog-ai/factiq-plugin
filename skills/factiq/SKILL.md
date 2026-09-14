@@ -110,8 +110,8 @@ All FactIQ tools are MCP tools provided by the `factiq` MCP server.
 | Tool | Purpose |
 |---|---|
 | `get_data_catalog` (`schemas?`, `full?`) | Per-schema index + the shared table DDL. **Call once per session before anything else.** `full=true` returns the heavy per-dataset dump (rarely needed — use `describe_dataset`). Schemas listed under `schemas_without_data` have no rows — skip them. |
-| `search_datasets` (`query`, `schemas?`, `limit?`) | Keyword (not semantic) ranking of datasets across all schemas. **The first discovery step** — find the right `schema` + `dataset_code`. |
-| `describe_dataset` (`schema`, `dataset_code`) | Full metadata for one dataset: topic, methodology, release dates, base-change notice, dimensions, example series. Call after `search_datasets`. |
+| `search_datasets` (`query`, `schemas?`, `limit?`) | Keyword (not semantic) ranking of datasets across all schemas. **The first discovery step** — find the right `schema` + `dataset_code`. Each hit may also carry `latest_period_end` (the latest observation period stored for the dataset, with `freshness` giving its status, refreshed_at and source) and `last_release_date` / `next_release_date` from the publisher's release calendar (some BLS, OEWS, BEA and Census datasets), with `release_metadata` giving `status`, `source` and `retrieved_at`. Ranking remains relevance-based. A server that does not report these fields yet omits them; treat a missing key like null. |
+| `describe_dataset` (`schema`, `dataset_code`) | Full metadata for one dataset: topic, methodology, base-change notice, dimensions, example series, plus the same `latest_period_end` and `freshness`. Publication fields `last_release_date`, `next_release_date` and `release_cadence` come from the publisher's release calendar for some BLS, OEWS, BEA and Census datasets; a dataset without a calendar can still carry a description-backed `release_cadence` (India MoSPI CPI) with null dates, and each field is null on its own where nothing is known. `release_metadata` gives `status` (available, partial, stale, unavailable), `source`, `source_url`, `retrieved_at` and a note. Calendar dates are as of `retrieved_at`, the time the calendar was last read: a scheduled date that has passed since then stays in `next_release_date` and is not confirmed as published. Free-text dates from a dataset description appear under `release_metadata.description_notes`, never as dates. Call after `search_datasets`. |
 | `search_series` (`schema`, `terms`, `limit?`, `include_compound?`) | Series-level title-substring search within one schema (`terms` is a list — prefer short stems). Includes `COMPOUND::` series. |
 | `run_sql` (`schema`, `sql`, `question?`, `explore?`, `auto_retry?`, `page?`) | Read-only SELECT against one schema. The power tool for joins, pivots, aggregation. `page` works on the `nasa_fires` schema only, where individual rows are the answer; everywhere else, aggregate. |
 | `get_series` (`schema`, `series_id`, `from_year?`, `to_year?`, `transform?`) | Fetch one series — timeseries, tabular, or `COMPOUND::` ids all work. `transform="yoy_pct"` (percent change) or `"yoy_diff"` (difference, for rates) adds a column with the change versus the same period one year earlier, matched by calendar date; the cell is null where that period is absent. A `coverage_note` with `missing_periods` means the series skips a period — disclose it. SEC-backed results include `row_sources` keyed by `result_index`, with the supporting filing, accession/form/date, reported-vs-derived status, and a standardized `source_link`. For those series `schema="filings"` and `schema="sec"` return the same result. |
@@ -295,6 +295,28 @@ previews.
    prefer short stems like `rare`, not `rare earth`) or exploration SQL
    (`run_sql` with `explore=true`) on the `series` and `dimensions` tables.
    For multi-source stories, actually fetch data from 2+ schemas.
+   When the question is about the latest value, check two separate things.
+   First, how current the stored data is: `latest_period_end` and
+   `freshness` (an observation period; a dataset-wide maximum does not
+   guarantee every series in it is equally current). When `freshness` is
+   missing, null, `stale` or `unavailable`, verify the observation dates of
+   the selected series with SQL (`MAX(time)` on `data_points`). Second, when
+   the publisher released or will release: `last_release_date`,
+   `next_release_date` and `release_cadence`, as of
+   `release_metadata.retrieved_at`. Report each date that is present and say
+   only the missing one is unavailable: a Census dataset has a
+   `last_release_date` but no `next_release_date`, and India MoSPI CPI has a
+   description-backed monthly cadence with null dates. A cold observation
+   cache does not make the calendar dates wrong, and a `stale` calendar does
+   not make the observation data old; flag each separately. A scheduled date
+   that has passed is not a confirmed release. Never infer a publication date
+   from an observation timestamp or from `freshness.refreshed_at`. For the
+   newest India CPI observation, compare `rbi.rbi-prices_wages` and
+   `mospi.mospi_cpi` (RBI republishes MoSPI CPI and may carry newer
+   General-index observations; use MoSPI for item detail) with
+   `date_trunc('month', ...)`, since month-start and month-end can mean the
+   same month, and verify the selected series, sector and base year. See
+   "Release dates and freshness" in `references/data/sql-guide.md`.
    Satellite-derived series live in two schemas: `portwatch` (daily shipping —
    chokepoints, ports, country trade estimates) and `satellite` (nighttime
    lights by state, lake/reservoir water levels) — see

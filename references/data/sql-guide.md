@@ -112,6 +112,88 @@ SELECT series_id, time, value FROM data_points
 WHERE series_id IN ('...', '...')
 ```
 
+## Release dates and freshness of a dataset
+
+`search_datasets` and `describe_dataset` report two different things about a
+dataset. Neither is the other.
+
+- `latest_period_end` + `freshness`: the latest observation period stored for
+  the dataset (the maximum `end_time` over its series) and when that value was
+  last refreshed (`freshness.refreshed_at`, with `status` available, stale or
+  unavailable). An observation period is not a publication date, and a
+  dataset-wide maximum does not guarantee that every series in it is equally
+  current.
+- `last_release_date`, `next_release_date`, `release_cadence` +
+  `release_metadata`: publication dates read from the publisher's own release
+  calendar for some datasets: most BLS datasets and the OEWS dataset (BLS
+  release calendar), most BEA datasets (BEA release schedule, past and
+  scheduled dates) and the Census economic-indicator programs (Census
+  indicator feed, past releases only, so `next_release_date` and
+  `release_cadence` are null for them). A dataset with no calendar can still
+  carry a `release_cadence` and `source_url` taken from its description (India
+  MoSPI CPI: monthly, dates null). Each field is null on its own where nothing
+  is known. `release_metadata.status` is `available` (all three fields),
+  `partial` (some fields), `stale` (the calendar could not be re-read
+  recently; the values shown are from the last successful read) or
+  `unavailable` (nothing known). Search hits carry the two dates with a
+  compact `release_metadata` (`status`, `source`, `retrieved_at`);
+  `describe_dataset` adds `source_url`, `release_names` and a note.
+
+Read the calendar dates as of `release_metadata.retrieved_at`, the time the
+calendar was last read: `last_release_date` is the latest calendar date on or
+before that read and `next_release_date` the first date after it. A scheduled
+date that has passed since the read stays in `next_release_date` with a note
+that it is not confirmed as published; do not report it as released. Never
+infer a publication date from `latest_period_end`, from a series `end_time` or
+from `freshness.refreshed_at`. Free-text dates from a dataset description are
+returned under `release_metadata.description_notes` and are not verified.
+
+Check the two groups separately and report what each one knows. A cold or
+`stale` observation cache does not make the calendar dates wrong, and a
+`stale` calendar does not make the stored data old; flag each on its own.
+Report every date that is present and say only the missing one is
+unavailable: for a Census dataset give `last_release_date` and say the next
+date is not published in the feed; for MoSPI CPI give the monthly cadence and
+say the exact dates are not available.
+
+A server that does not report these fields yet omits them. Treat a missing key
+like null: when `freshness` is missing, null, `stale` or `unavailable`, verify
+the latest stored observation of the exact series yourself, and when a
+release field is missing or null say that that publication date is not
+available rather than estimating one.
+
+```sql
+-- Latest stored observation of the series you selected (the truth for
+-- "how recent is the data"); run in the dataset's schema.
+SELECT series_id, MAX(time) AS latest_observation
+FROM data_points
+WHERE series_id IN ('CUUR0000SA0', 'CUSR0000SA0')
+GROUP BY series_id
+```
+
+## India CPI freshness and source choice
+
+For the newest India CPI observation, check `rbi.rbi-prices_wages` as well as
+`mospi.mospi_cpi`. RBI republishes MoSPI CPI and may carry newer General-index
+observations in the available data; use MoSPI for item detail. Neither source is
+always fresher. Compare `search_datasets`' cached `latest_period_end` and
+`freshness.status` before selecting a source, then verify the exact series,
+national geography, rural/urban/combined sector, units and base year.
+
+The dataset-wide maximum does not guarantee every constituent series is equally
+current (the RBI prices/wages dataset also contains non-CPI series). It is an
+observation period, not a publication date. `freshness.refreshed_at` is the metadata
+refresh time; stale or unavailable metadata cannot establish the latest release.
+Neither India dataset is covered by a machine-readable release calendar:
+`describe_dataset` reports MoSPI's monthly cadence and its release-calendar link
+with null publication dates, and null for everything on the RBI dataset. Do not
+infer them from observation timestamps.
+
+Compare equivalent monthly periods with `date_trunc('month', ...)`: MoSPI may
+use month-start and RBI month-end for the same month. Do not rank the latter as a
+newer monthly print merely because its day is later. Preserve the CPI 2012/2024
+base-change guidance; never splice reclassified sub-aggregates across bases.
+
 ## National vs. sub-national series — the classic trap
 
 Geographically decomposed datasets are dominated by state/region rows; the
