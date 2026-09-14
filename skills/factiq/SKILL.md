@@ -111,7 +111,7 @@ All FactIQ tools are MCP tools provided by the `factiq` MCP server.
 |---|---|
 | `get_data_catalog` (`schemas?`, `full?`) | Per-schema index + the shared table DDL. **Call once per session before anything else.** `full=true` returns the heavy per-dataset dump (rarely needed — use `describe_dataset`). Schemas listed under `schemas_without_data` have no rows — skip them. |
 | `search_datasets` (`query`, `schemas?`, `limit?`) | Keyword (not semantic) ranking of datasets across all schemas. **The first discovery step** — find the right `schema` + `dataset_code`. |
-| `describe_dataset` (`schema`, `dataset_code`) | Full metadata for one dataset: topic, methodology, base-change notice, dimensions, example series. Last/next release dates appear only when the dataset metadata supplies them and can be absent or out of date; verify the current or upcoming release with the publisher. Call after `search_datasets`. |
+| `describe_dataset` (`schema`, `dataset_code`) | Full metadata for one dataset: topic, methodology, base-change notice, dimensions, example series. Call after `search_datasets`. |
 | `search_series` (`schema`, `terms`, `limit?`, `include_compound?`) | Series-level title-substring search within one schema (`terms` is a list — prefer short stems). Includes `COMPOUND::` series. |
 | `run_sql` (`schema`, `sql`, `question?`, `explore?`, `auto_retry?`, `page?`) | Read-only SELECT against one schema. The power tool for joins, pivots, aggregation. `page` works on the `nasa_fires` schema only, where individual rows are the answer; everywhere else, aggregate. |
 | `get_series` (`schema`, `series_id`, `from_year?`, `to_year?`, `transform?`) | Fetch one series — timeseries, tabular, or `COMPOUND::` ids all work. `transform="yoy_pct"` (percent change) or `"yoy_diff"` (difference, for rates) adds a column with the change versus the same period one year earlier, matched by calendar date; the cell is null where that period is absent. A `coverage_note` with `missing_periods` means the series skips a period — disclose it. SEC-backed results include `row_sources` keyed by `result_index`, with the supporting filing, accession/form/date, reported-vs-derived status, and a standardized `source_link`. For those series `schema="filings"` and `schema="sec"` return the same result. |
@@ -318,18 +318,6 @@ previews.
    (`WEO_IND.NGDPD.A_2025OCT`), lives in a dataset whose code ends in
    `_vintages`, and carries a `release` dimension. See **IMF past releases** in
    `references/data/schemas.md`.
-
-   **Freshness and official releases.** When the user asks for the latest
-   value, whether a figure is current, or when the next release is due,
-   follow **Checking data freshness and official releases** in
-   `references/data/sql-guide.md`: resolve the exact series, read its most
-   recent non-null observation with a bounded query on that `series_id`
-   (never a dataset-wide `MAX(time)`), and verify the publisher's latest release on
-   its official page with your client's web tools when the answer depends
-   on it. An observation period is not a publication date. Use the
-   source-specific details in dataset descriptions (an equivalent series in
-   another schema, how months are dated) to choose and compare series, but
-   still check the actual observation.
 
    **Domain report patterns.** If the question is broad and analytical —
    policy, trade, revenue, investment analysis, "what's driving X" — read
@@ -645,8 +633,7 @@ which is also all it needs.
   live, authoritative version; `search_datasets` / `describe_dataset` drill
   into individual datasets on demand.
 - `sql-guide.md` — table structure, query idioms, pitfalls (frequency
-  literals, national vs sub-national, pivots, tabular data), and how to
-  check data freshness against the publisher's official releases.
+  literals, national vs sub-national, pivots, tabular data).
 - `satellite.md` — the `get_geo_data` satellite tool: datasets and their
   economic reading, region syntax and coverage, window budgeting, the
   spatial `grid` mode, the fires-only `points` and `seasons` modes and the

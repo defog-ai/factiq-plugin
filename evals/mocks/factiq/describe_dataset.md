@@ -5,8 +5,6 @@
   "topic": "National labor force status: employment, unemployment, the unemployment rate, labor force participation and the employment-population ratio, monthly.",
   "methodology": "The Current Population Survey is a monthly sample survey of about 60,000 households conducted by the U.S. Census Bureau for the Bureau of Labor Statistics. Data describe the calendar week containing the 12th of the month.",
   "discontinuities": "At the end of each calendar year BLS re-estimates seasonal factors and revises the previous 5 years of seasonally adjusted history. Not seasonally adjusted data are final when published.",
-  "last_release_date": "2026-09-04",
-  "next_release_date": "2026-10-02",
   "frequency": "monthly",
   "dimensions": [
     {
