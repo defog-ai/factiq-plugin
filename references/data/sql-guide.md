@@ -112,6 +112,81 @@ SELECT series_id, time, value FROM data_points
 WHERE series_id IN ('...', '...')
 ```
 
+## Checking data freshness and official releases
+
+Use this when the user asks for the latest value, whether a number is
+current, whether another source is newer, or when the next release is due.
+If the question only asks when data was or will be released, go directly
+to the publisher check in step 4.
+Read the dataset description first (`describe_dataset`): its source-specific
+details — an equivalent series in another schema, how the source dates its
+months, base-year families — tell you which series to choose and how to
+compare them. A description can carry old coverage claims, so it never
+replaces the live observation check or the publisher check below.
+
+1. **Resolve the exact series first.** Pick the one `series_id` you will
+   answer with (`search_series`, or an exploration query on `series`).
+   `series.end_time` is a hint, not the answer.
+2. **Read its most recent non-null observation with a bounded query on
+   that id.** Query the selected series only. `MAX(time)` over a dataset or a
+   whole schema reports whichever series happens to end last, which is
+   usually not the one you are answering with.
+
+   ```sql
+   SELECT time, value FROM data_points
+   WHERE series_id = '<exact id>' AND value IS NOT NULL
+   ORDER BY time DESC LIMIT 1
+   ```
+
+   The `(series_id, time DESC)` index serves this directly. For a few
+   selected ids, repeat the same query once per exact id. Keep
+   `value IS NOT NULL` so a trailing empty value is never reported as the
+   latest data. This SQL applies to time series only. For a tabular series
+   (`data_type = 'tabular'`), fetch it with `get_series`, inspect its
+   documented columns, and identify the latest relevant date if the table
+   has one — rows are not necessarily sorted by date, and some tables have
+   no date column. For a compound series, fetch it with `get_series` and
+   take the latest non-null dated value.
+3. **An observation period is not a publication date.** A stored July value
+   says nothing about when July was published, and monthly or quarterly
+   spacing between observations says nothing about the publisher's release
+   schedule — never infer publication cadence from `frequency`. Forecast
+   and projection series are dated by their target period (a 2030 value may
+   have been published in 2025), so their latest `time` is not their
+   freshness; use the release information the dataset carries (the IMF
+   `_vintages` datasets and `release` dimension — see **IMF past releases**
+   in `schemas.md`) or the publisher page.
+4. **When the answer depends on the latest published release or the next
+   one, verify it on the publisher's official page** — the statistical
+   office's or central bank's release page, release calendar or press
+   release — using the web fetch or web search tools your client provides.
+   Confirm the release actually happened: a scheduled date that has passed
+   is not proof of publication. Then compare the publisher's latest period
+   with the stored period from step 2.
+5. **Compare equivalent series only.** When the same measure exists in more
+   than one schema or source, compare the same period, measure, geography,
+   base year and seasonal adjustment. A source that dates a month on its
+   first day and one that dates it on its last day describe the same month;
+   compare on `date_trunc('month', time)`. Never swap in a different sector,
+   geography or base year to obtain a newer period.
+6. **A matching period does not prove the latest revision was loaded.** If
+   the user asks for revised or current values, also compare the value
+   itself, or the release version where the dataset carries one, against
+   the publisher page — or say that revisions were not verified.
+7. **If browsing is unavailable**, say that publication recency was not
+   verified and report the stored period only.
+
+Report what the user asked, briefly: the stored latest period and value,
+and — when the question needed it — the publisher's latest published period
+with its release date and the official source link. Mention the next
+release date or revision status only when the user asked about them. If
+the user asked whether the value is current and you could not verify
+publication, say so. Do not paste the diagnostic query output or JSON into
+the answer. For example:
+
+> Stored: <series title>, latest observation <period> = <value>. The
+> publisher's release page shows <period> published on <date> (<link>).
+
 ## National vs. sub-national series — the classic trap
 
 Geographically decomposed datasets are dominated by state/region rows; the

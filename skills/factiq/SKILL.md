@@ -319,6 +319,18 @@ previews.
    `_vintages`, and carries a `release` dimension. See **IMF past releases** in
    `references/data/schemas.md`.
 
+   **Freshness and official releases.** When the user asks for the latest
+   value, whether a figure is current, or when the next release is due,
+   follow **Checking data freshness and official releases** in
+   `references/data/sql-guide.md`: resolve the exact series, read its most
+   recent non-null observation with a bounded query on that `series_id`
+   (never a dataset-wide `MAX(time)`), and verify the publisher's latest release on
+   its official page with your client's web tools when the answer depends
+   on it. An observation period is not a publication date. Use the
+   source-specific details in dataset descriptions (an equivalent series in
+   another schema, how months are dated) to choose and compare series, but
+   still check the actual observation.
+
    **Domain report patterns.** If the question is broad and analytical —
    policy, trade, revenue, investment analysis, "what's driving X" — read
    `references/report-patterns/README.md` **before fetching**. It teaches the
@@ -633,7 +645,8 @@ which is also all it needs.
   live, authoritative version; `search_datasets` / `describe_dataset` drill
   into individual datasets on demand.
 - `sql-guide.md` — table structure, query idioms, pitfalls (frequency
-  literals, national vs sub-national, pivots, tabular data).
+  literals, national vs sub-national, pivots, tabular data), and how to
+  check data freshness against the publisher's official releases.
 - `satellite.md` — the `get_geo_data` satellite tool: datasets and their
   economic reading, region syntax and coverage, window budgeting, the
   spatial `grid` mode, the fires-only `points` and `seasons` modes and the
