@@ -61,7 +61,7 @@
     },
     {
       "name": "describe_dataset",
-      "description": "Full metadata for one dataset: topic, methodology, discontinuities,\nany base-change notice, plus the live dimensions and example series.\nLast/next release dates are included only when the dataset metadata\nsupplies them; they can be absent or out of date, so verify the current or\nupcoming release with the publisher. Call after `search_datasets` narrows\nyou to a dataset.",
+      "description": "Full metadata for one dataset: topic, methodology, discontinuities,\nrelease dates, any base-change notice, plus the live dimensions and example\nseries. Call after `search_datasets` narrows you to a dataset.",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {
