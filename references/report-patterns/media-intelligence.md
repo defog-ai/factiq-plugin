@@ -1,9 +1,13 @@
 # Media-Appearance Intelligence
 
-Use this playbook for questions about what executives said outside earnings
-calls in podcasts, television interviews, and conference appearances. It covers
-coverage checks, theme sweeps, timelines, cross-company comparisons, and
-media-vs-earnings comparisons.
+Use this playbook for questions about what was said outside earnings calls
+on podcasts, television interviews, and at conferences. The speakers are
+company executives, investors, fund managers, analysts, economists,
+journalists, and other guests, and their claims cover listed and unlisted
+companies (OpenAI, DeepSeek, MiniMax), institutions (the Federal Reserve, the
+European Central Bank, regulators), and whole markets and industries, not only
+the speaker's own employer. It covers coverage checks, theme sweeps,
+timelines, cross-company comparisons, and media-vs-earnings comparisons.
 
 The corpus is a structured evidence source, not a transcript-reading agent.
 Normal calls perform deterministic lexical retrieval over precomputed
@@ -69,7 +73,8 @@ The public shapes differ:
 |---|---|
 | `query` | Concise lexical topic. Empty strings browse according to the target table above |
 | `search_target` | One of the six values in the table above |
-| `company_filter` | Comma-separated exact primary tickers for structured findings; catalog targets also match exact stored entity-reference tokens |
+| `company` | Comma-separated tickers and company names, mixed freely (`"NVDA,OpenAI,Federal Reserve"`). A stored ticker matches the appearance's company or a section subject with that ticker; any other value is matched as the name of a company, institution, or organisation a section is about, ignoring punctuation, a leading "The", and corporate suffixes (`"NVIDIA Corp."` finds NVIDIA; `"open ai"` finds OpenAI; `"Alphabet"` also reaches GOOGL rows). The result records `company_tickers`, `company_names`, `company_matched`, and `company_unmatched`; a value that matches nothing returns no rows and up to five possible matches under `company_unmatched`, not an error. The `appearances` and `coverage` targets also match every value, upper-cased, against the entity references of claims (products, rivals, partners such as `"CUDA"` or `"ChatGPT"`); a value found only there still filters those targets and is listed under `company_references`. Alternate spellings can return different `appearances` or `coverage` rows because reference names are matched exactly (`"open ai"` and `"OpenAI"` select the same subject but not the same references); the claims rows are the same |
+| `company_filter` | Old name of `company`, still accepted with the same behaviour; the response note asks for a plugin update. Do not pass both |
 | `person` | Case-insensitive name substring over finding and/or appearance speaker metadata |
 | `sort` | `relevance` (default) or `newest`, with the exact ordering described above |
 | `appearance_type` | `podcast`, `tv_interview`, `conference`, or `other`; applies to every target |
@@ -87,7 +92,7 @@ returns raw transcript text, caption/evidence spans, extraction prompts, or
 other internal provenance.
 
 Every call is capped at 50 rows. When results reach the cap, narrow with
-`company_filter`, `person`, target, `appearance_type`, `claim_family`,
+`company`, `person`, target, `appearance_type`, `claim_family`,
 or a smaller publication-date window and synthesize bounded calls. Never use
 `run_sql` against the gated `transcripts` schema, imply pagination exists,
 or promise a complete transcript dump.
