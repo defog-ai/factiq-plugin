@@ -143,6 +143,48 @@ claude mcp add --transport http factiq https://api.factiq.com/mcp
 Then authorize with `/mcp`.
 </details>
 
+### Without a browser: scripts, CI, and headless agents
+
+Every FactIQ tool also works with a personal API key instead of the browser
+sign-in. Create the key at [factiq.com/settings/security](https://www.factiq.com/settings/security)
+and send it as a bearer token. The full reference, with a REST endpoint table
+and Python examples, is at
+[factiq.com/docs/api](https://www.factiq.com/docs/api).
+
+Call a REST endpoint:
+
+```bash
+curl https://api.factiq.com/tools/context \
+  -H "Authorization: Bearer $FACTIQ_API_KEY"
+```
+
+Call an MCP tool over plain HTTP (one JSON-RPC POST, no session handshake):
+
+```bash
+curl https://api.factiq.com/mcp \
+  -H "Authorization: Bearer $FACTIQ_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call",
+       "params":{"name":"get_data_catalog","arguments":{}}}'
+```
+
+Register the MCP server with the key so a headless coding agent never opens a
+browser:
+
+```bash
+# Claude Code
+claude mcp add factiq https://api.factiq.com/mcp --transport http \
+  --header "Authorization: Bearer $FACTIQ_API_KEY"
+
+# Codex (reads the key from the environment variable at start-up)
+codex mcp add factiq --url https://api.factiq.com/mcp \
+  --bearer-token-env-var FACTIQ_API_KEY
+```
+
+Keep the key out of source control. Regenerating it on the settings page
+revokes the old one immediately.
+
 ## Try it
 
 Once installed and authenticated, ask a question:
@@ -319,9 +361,12 @@ chart or report output. Include exact before-and-after examples in the PR.
 
 ## Security
 
-No secrets belong in this repo, and the plugin holds none — all access goes
-through the MCP server's OAuth flow, so the coding agent holds the token and
-nothing is written here. All SQL runs read-only against FactIQ's data warehouse.
+No secrets belong in this repo, and the plugin holds none — interactive
+access goes through the MCP server's OAuth flow, so the coding agent holds the
+token and nothing is written here. Headless use relies on a personal API key
+that you create on the FactIQ settings page and keep in your own environment;
+it is never stored in this repo. All SQL runs read-only against FactIQ's data
+warehouse.
 
 ## License
 

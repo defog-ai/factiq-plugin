@@ -4,6 +4,13 @@ FactIQ uses the bundled `factiq` remote MCP server and FactIQ OAuth. Do not ask
 the user for an API key, access token, or password. The user completes sign-in
 in FactIQ's browser flow.
 
+The one exception is a headless environment (CI, a server, a scripted agent
+run) where no browser can open. There the user creates a personal API key at
+[factiq.com/settings/security](https://www.factiq.com/settings/security) and
+registers the server with it themselves; see
+[Headless environments](#headless-environments) below. Never ask the user to
+paste the key into the chat.
+
 ## Claude Code
 
 1. If the plugin was installed in the current session, ask the user to run
@@ -31,6 +38,26 @@ Cowork has no terminal, so use only the Claude interface:
 4. Confirm that FactIQ shows as connected. If Claude reports stale or missing
    tools after an update, disconnect and reconnect FactIQ to refresh its tool
    list.
+
+## Headless environments
+
+When no browser is available, the user registers the MCP server with an API
+key instead of signing in. Point them to
+[factiq.com/docs/api](https://www.factiq.com/docs/api) for the full guide. The
+short form:
+
+```bash
+# Claude Code
+claude mcp add factiq https://api.factiq.com/mcp --transport http \
+  --header "Authorization: Bearer $FACTIQ_API_KEY"
+
+# Codex
+codex mcp add factiq --url https://api.factiq.com/mcp \
+  --bearer-token-env-var FACTIQ_API_KEY
+```
+
+The key must come from the user's own environment. Do not read it from a file,
+print it, or write it into a commit.
 
 ## Verify the connection
 
