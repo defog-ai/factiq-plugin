@@ -1,9 +1,13 @@
 # Media-Appearance Intelligence
 
 Use this playbook for questions about what was said outside earnings calls
-on podcasts, television interviews, and at conferences. The speakers are
+on podcasts, television interviews, and at conferences, and about what
+official institutions published: central-bank speeches, congressional
+testimony, meeting minutes, policy statements, and press-conference
+transcripts (the Federal Reserve and the FOMC first; other institutions and
+parliamentary hearings follow). The speakers are
 company executives, investors, fund managers, analysts, economists,
-journalists, and other guests, and their claims cover listed and unlisted
+journalists, other guests, and officials speaking for their institution, and their claims cover listed and unlisted
 companies (OpenAI, DeepSeek, MiniMax), institutions (the Federal Reserve, the
 European Central Bank, regulators), and whole markets and industries, not only
 the speaker's own employer. It covers coverage checks, theme sweeps,
@@ -38,7 +42,12 @@ score second. Do not invert that default when describing unsorted calls.
 `date_from` and `date_to` are inclusive bounds on the video's stored
 publication/upload date. That date may differ from the recording, conference,
 or broadcast date. Label it as the publication date unless the linked source
-independently establishes the event date.
+independently establishes the event date. Official-document rows carry the
+event date separately as `event_date`: FOMC minutes are published about
+three weeks after the meeting, so a minutes row dated 2026-08-19 describes
+the meeting of 2026-07-29. Quote the meeting date when reporting what the
+Committee discussed and the publication date when reporting when it became
+public.
 
 ## Targets and Result Shapes
 
@@ -61,7 +70,12 @@ The public shapes differ:
 - `search`, `claims`, `passages`, and `pressure_points` return
   `result_kind`, `canonical_paraphrase`, speaker, primary ticker, topic
   labels, video title/channel/publication metadata, lexical relevance, and a
-  timestamped YouTube deep link.
+  `source_url`: a timestamped YouTube deep link for videos, the episode page
+  for podcasts, and the document page for official documents (a PDF
+  transcript links to the page the finding is on, `...pdf#page=7`).
+  Official-document rows also carry `institution`, `document_kind` (for
+  example `minutes`, `press_conference`, `implementation_note`), and
+  `event_date`; these are null on interview rows.
 - `appearances` returns video-level title/channel/publication/type metadata,
   primary ticker, attribution fields, matching-claim count, URL, and relevance.
 - `coverage` returns company-level appearance count, publication-date span,
@@ -77,7 +91,9 @@ The public shapes differ:
 | `company_filter` | Old name of `company`, still accepted with the same behaviour; the response note asks for a plugin update. Do not pass both |
 | `person` | Case-insensitive name substring over finding and/or appearance speaker metadata |
 | `sort` | `relevance` (default) or `newest`, with the exact ordering described above |
-| `appearance_type` | `podcast`, `tv_interview`, `conference`, or `other`; applies to every target |
+| `appearance_type` | Interviews: `podcast`, `tv_interview`, `conference`, or `other`. Official documents: `speech`, `testimony`, `minutes` (also discount-rate minutes), `statement` (also implementation notes and the longer-run goals statement), `press_conference`, or `hearing`; projections tables and other releases are `other`. Applies to every target |
+| `institution` | Case-insensitive substring of the publishing institution (`"Federal Reserve"`). Restricts every target to official documents; interview rows have no institution |
+| `country` | ISO code of the institution's country (`"US"`). Restricts every target to official documents of that country |
 | `claim_family` | Claim-ontology code; invalid values return the vocabulary |
 | `date_from`, `date_to` | Inclusive YYYY-MM-DD publication/upload-date bounds |
 | `detail` | Adds normalized claim and attribution fields to finding targets; does not expose source text |
@@ -92,8 +108,9 @@ returns raw transcript text, caption/evidence spans, extraction prompts, or
 other internal provenance.
 
 Every call is capped at 50 rows. When results reach the cap, narrow with
-`company`, `person`, target, `appearance_type`, `claim_family`,
-or a smaller publication-date window and synthesize bounded calls. Never use
+`company`, `person`, target, `appearance_type`, `institution`, `country`,
+`claim_family`, or a smaller publication-date window and synthesize bounded
+calls. Never use
 `run_sql` against the gated `transcripts` schema, imply pagination exists,
 or promise a complete transcript dump.
 
@@ -105,12 +122,13 @@ the speaker's exact words. Every reported finding should include:
 
 - person and role when returned;
 - company/ticker when available;
-- video publication date;
-- video title and channel;
-- timestamped YouTube link.
+- video publication date (and `event_date` for an official document);
+- video title and channel, or document title and institution;
+- timestamped YouTube link, or the document page link.
 
-Use phrasing such as “In a video published on 2026-05-12, X said that ...” and
-cite the deep link. If exact wording, tone, hedging, or rhetorical emphasis is
+Use phrasing such as “In a video published on 2026-05-12, X said that ...” or
+“In the minutes of the FOMC meeting of 2026-07-29, published 2026-08-19, the
+Committee ...” and cite the link. If exact wording, tone, hedging, or rhetorical emphasis is
 load-bearing, follow the timestamped link and independently verify the source
 before quoting or making a tone claim. `detail=true` does not relax this rule.
 
