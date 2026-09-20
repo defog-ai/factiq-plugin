@@ -303,6 +303,10 @@ previews.
    live in a third schema, `nasa_fires`, which holds raw detections rather than
    series and is shaped unlike the others — read its section in
    `references/data/schemas.md` before writing SQL against it.
+   To find companies that match conditions (sector, market value,
+   price-to-sales, margins, growth), run one `run_sql` query on the view
+   `screener.companies` — read **Company screener** in
+   `references/data/sql-guide.md` first, and state `price_as_of` in the answer.
 
    Eurostat Comext is the exception: country schemas contain millions of
    series, so do not explore their `series` or `dimensions` tables by text or

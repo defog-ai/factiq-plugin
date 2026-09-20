@@ -361,6 +361,66 @@ GROUP BY cc
 ORDER BY cc;
 ```
 
+## Company screener
+
+`screener.companies` is a view with one row per US-listed company that files
+financial statements with the SEC, about 2,400 rows. The `screener` schema has
+no `series` or `data_points` tables; filter the view on its columns with
+`run_sql(schema="screener", ...)`.
+
+- **Identity and labels**: `ticker`, `company_name`, `sector`, `industry`
+  (Nasdaq's labels, not GICS), `sic_code`, `sic_description`,
+  `naics_sector_code`, `country`, `issuer_id`, `cik`.
+- **Price** (US dollars, from Nasdaq's public stock list): `price`,
+  `price_change_pct`, `volume`, `market_cap` (the whole company, all share
+  classes), `enterprise_value` (`market_cap + total_debt - cash`).
+- **Ratios, computed when you query**: `price_to_sales`, `price_to_earnings`,
+  `price_to_book`, `ev_to_sales`, `ev_to_operating_income`.
+- **Latest twelve months, from the company's filings** (in
+  `reporting_currency`): `revenue_ttm`, `gross_profit_ttm`,
+  `operating_income_ttm`, `net_income_ttm`, `operating_cash_flow_ttm`,
+  `capex_ttm`, `free_cash_flow_ttm`, and the fractions `gross_margin`,
+  `operating_margin`, `net_margin`, `revenue_growth_yoy` (0.25 = 25%).
+- **Latest balance sheet**: `cash`, `total_debt`, `stockholders_equity`,
+  `shares_outstanding`.
+- **How fresh the row is**: `price_as_of` (time of the last good price
+  refresh), `price_changed_at`, `fundamentals_period_end` (the date the twelve
+  months end), `ttm_basis` (`four_quarters`, or `latest_annual` when four
+  back-to-back quarters were not filed), `fundamentals_updated_at`.
+
+```sql
+-- Technology companies above $50B with price-to-sales above 10
+SELECT ticker, company_name, market_cap, price_to_sales, revenue_growth_yoy,
+       price_as_of
+FROM screener.companies
+WHERE sector = 'Technology' AND price_to_sales > 10 AND market_cap > 5e10
+ORDER BY market_cap DESC
+LIMIT 25;
+```
+
+Rules that change the answer:
+
+- Look at the labels before you filter on one:
+  `SELECT sector, count(*) FROM screener.companies GROUP BY 1`. A few large
+  companies have no Nasdaq sector (Berkshire Hathaway); `sic_description` is
+  filled for nearly every row.
+- A ratio is NULL when its bottom number is zero or negative, so a loss-making
+  company has no `price_to_earnings`. It is also NULL when
+  `reporting_currency` is not USD (about 180 filers report in EUR, CAD, CNY and
+  others; no currency is converted). `price_to_sales < 2` therefore leaves
+  those companies out. Say so when it matters.
+- Prices are delayed about fifteen minutes and refresh only while the US
+  market is open. State `price_as_of` in the answer. Call `get_market_data`
+  when the user needs the current price of one company.
+- Always `ORDER BY` and `LIMIT`; count the matches first when the list may be
+  long.
+- `screener.daily_history` (`ticker`, `trade_date`, `price`, `market_cap`,
+  `enterprise_value`, `price_to_sales`, `price_to_earnings`, `price_to_book`,
+  `ev_to_sales`) has one row per company per trading day and starts in
+  September 2026.
+- For the filed values behind a row, call `search_company_filings` with the
+  ticker, or join `filings` tables on `issuer_id`.
+
 ## Pivoting to wide format
 
 Chart data wants one row per time period with one column per series. Use

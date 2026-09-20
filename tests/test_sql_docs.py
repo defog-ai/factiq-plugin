@@ -236,5 +236,65 @@ class SeriesMathYoyGapTests(unittest.TestCase):
         self.assertIn("CPI: 2025-05-01", result.stderr)
 
 
+class CompanyScreenerDocumentationTests(unittest.TestCase):
+    """A question such as "technology companies with price-to-sales above 10"
+    is answered by one query on the view screener.companies; every doc that
+    routes questions must point there, and the guide must carry the rules
+    that change the answer."""
+
+    SCHEMAS = (ROOT / "references/data/schemas.md").read_text(encoding="utf-8")
+    SECTION = SQL_GUIDE.split("## Company screener", 1)[1].split(
+        "## Pivoting to wide format", 1
+    )[0]
+
+    def test_schema_table_lists_the_screener_and_points_to_the_guide(self):
+        row = next(
+            line for line in self.SCHEMAS.splitlines() if line.startswith("| `screener` |")
+        )
+        self.assertIn("`screener.companies`", row)
+        self.assertIn("`price_as_of`", row)
+        self.assertIn("references/data/sql-guide.md", row)
+
+    def test_routing_list_sends_condition_questions_to_the_view(self):
+        routing = normalized(self.SCHEMAS)
+        self.assertIn("companies that match conditions", routing)
+        self.assertIn("`run_sql` query on `screener.companies`", routing)
+
+    def test_skill_workflow_names_the_view_and_the_guide_section(self):
+        skill = normalized(SKILL)
+        self.assertIn("`screener.companies`", skill)
+        self.assertIn("**company screener**", skill)
+
+    def test_guide_lists_the_columns_a_condition_needs(self):
+        for column in (
+            "sector",
+            "market_cap",
+            "price_to_sales",
+            "price_to_earnings",
+            "enterprise_value",
+            "revenue_ttm",
+            "revenue_growth_yoy",
+            "reporting_currency",
+            "price_as_of",
+            "fundamentals_period_end",
+        ):
+            self.assertIn(f"`{column}`", self.SECTION)
+
+    def test_guide_example_filters_the_view_and_limits_the_result(self):
+        example = self.SECTION.split("```sql", 1)[1].split("```", 1)[0]
+        self.assertIn("FROM screener.companies", example)
+        self.assertIn("ORDER BY", example)
+        self.assertIn("LIMIT", example)
+
+    def test_guide_states_the_rules_that_change_the_answer(self):
+        rules = normalized(self.SECTION)
+        self.assertIn("select sector, count(*) from screener.companies", rules)
+        self.assertIn("a ratio is null when its bottom number is zero or negative", rules)
+        self.assertIn("`reporting_currency` is not usd", rules)
+        self.assertIn("delayed about fifteen minutes", rules)
+        self.assertIn("state `price_as_of` in the answer", rules)
+        self.assertIn("`get_market_data`", rules)
+
+
 if __name__ == "__main__":
     unittest.main()
