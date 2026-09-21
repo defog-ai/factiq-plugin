@@ -35,6 +35,22 @@ possible matches. A company name passed in `ticker` is still read as
 a name; the response lists it under `read_as_company_name` and the
 note asks for `company_name` next time. `company_filter` is the old name of
 `ticker`; the tool still accepts it, but new calls should use `ticker`.
+
+Companies listed in India are stored under the NSE symbol with the `.NS`
+suffix: `ticker="RELIANCE.NS"`, `ticker="TCS.NS"`, `ticker="M&M.NS"`. Use that
+form. A plain NSE symbol (`ticker="TCS"`) is also read as the `.NS` company;
+the response reports it in `read_as_exchange_symbol`. Two cases need care:
+
+- A symbol that is also a stored US ticker selects the US listing alone.
+  `ticker="INFY"` is Infosys's US-listed shares and `ticker="INFY.NS"` is its
+  NSE listing; the two carry separate calls, and the note names the other one.
+- A plain symbol that also fits the name of another company
+  (`ticker="RELIANCE"` fits Reliance Inc., `RS`) selects every company it
+  fits, and `company_tickers` and the note list them. Check `company_tickers`
+  and repeat the call with the full `.NS` ticker to get one company.
+
+Indian fiscal years end in March, so `FY2026Q1` of an Indian company is
+April to June 2025. Take the exact period labels from `coverage`.
 Treat its live
 `calls_covered`, `earliest_period`, `latest_period`, and `latest_call_date` as
 the authoritative coverage window; do not rely on a static assumption about

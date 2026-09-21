@@ -96,6 +96,14 @@ class EarningsDocumentationContractTests(unittest.TestCase):
         self.assertIn("exact quarter", cross_company)
         self.assertIn("calendar_date", cross_company)
 
+    def test_indian_companies_use_the_nse_suffix(self):
+        for text in (SKILL_EARNINGS, PLAYBOOK):
+            normalized = " ".join(text.split())
+            self.assertIn("TCS.NS", normalized)
+            self.assertIn("read_as_exchange_symbol", normalized)
+            # INFY is the US listing; the NSE listing needs the suffix.
+            self.assertIn("INFY.NS", normalized)
+
 
 if __name__ == "__main__":
     unittest.main()
