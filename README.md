@@ -5,7 +5,8 @@ Turn your agent into a finance and economy analyst. This plugin for Claude
 agent direct access to
 FactIQ's warehouse of official statistics — SEC filings, US, China, India, Korea, IMF,
 World Bank, and more — plus live market data, earnings-call transcripts,
-executive media appearances, and satellite-derived data (fire detections,
+executive media appearances, central-bank speeches, minutes, and statements,
+and satellite-derived data (fire detections,
 air-quality activity signals,
 rainfall, nighttime lights, shipping and port activity, reservoir levels).
 The agent discovers series, runs read-only SQL, computes derived metrics, and
@@ -212,6 +213,12 @@ newest ordering only for a timeline. Results are public-safe paraphrases with
 timestamped YouTube links, not quotations; the workflow verifies the linked
 source when exact wording or tone is material. A dedicated playbook also keeps
 media-vs-earnings comparisons aligned by company, person, topic, and date.
+The same tool covers documents published by central banks and monetary
+authorities (the Federal Reserve, the European Central Bank, the Bank of
+England, the Bank of Japan, the Reserve Bank of India, and others): a question
+such as "What has the Bank of Japan said about the inflation outlook?" filters
+by `institution` or `country` and reports the meeting or speech date that each
+document carries.
 
 ## How it works
 
@@ -262,12 +269,12 @@ recipes live in [`references/data/sql-guide.md`](references/data/sql-guide.md).
 
 | Region | Schemas |
 |---|---|
-| United States | SEC filings data, BLS (employment, CPI, JOLTS, OEWS), Census (trade incl. HS-level, retail, housing), BEA (GDP, income), EIA (energy), USDA ERS, BTS (transportation), earnings-call transcripts, executive media appearances |
+| United States | SEC filings data, BLS (employment, CPI, JOLTS, OEWS), Census (trade incl. HS-level, retail, housing), BEA (GDP, income), EIA (energy), USDA ERS, BTS (transportation), earnings-call transcripts, executive media appearances, Federal Reserve speeches, testimony, statements, minutes, and press-conference transcripts |
 | China | NBS macro indicators, GACC customs (HS-level trade) |
-| India | MOSPI (CPI, WPI, IIP, GDP), RBI (banking, rates, forex), DGCI&S trade (HS-level), Bengaluru road traffic (2026 onward, that one city only) |
+| India | MOSPI (CPI, WPI, IIP, GDP), RBI (banking, rates, forex), DGCI&S trade (HS-level), Bengaluru road traffic (2026 onward, that one city only), RBI speeches and press releases |
 | South Korea | KCS customs (HS-level trade) |
-| European Union | Eurostat Comext monthly trade for all 27 member-state reporters, by CN8 product and partner country |
-| Global | IMF (including the recent earlier releases of its forecasts, so a revision can be traced), World Bank, Singapore SingStat, live market data (quotes, fundamentals, FX, commodities) |
+| European Union | Eurostat Comext monthly trade for all 27 member-state reporters, by CN8 product and partner country; European Central Bank and national central-bank speeches, interviews, statements, and minutes |
+| Global | IMF (including the recent earlier releases of its forecasts, so a revision can be traced), World Bank, Singapore SingStat, live market data (quotes, fundamentals, FX, commodities), central-bank documents from the UK, Japan, China, Korea, Hong Kong, and Taiwan |
 
 `references/data/schemas.md` has the static overview; the `get_data_catalog` tool
 returns the live, authoritative version.

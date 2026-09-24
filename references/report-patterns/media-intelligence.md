@@ -1,13 +1,17 @@
 # Media-Appearance Intelligence
 
 Use this playbook for questions about what was said outside earnings calls
-on podcasts, television interviews, and at conferences. The speakers are
+on podcasts, television interviews, and at conferences, and about what
+central banks and monetary authorities published: speeches, interviews, blog
+posts, policy statements, press releases, meeting minutes, press-conference
+transcripts, testimony before legislatures, and reports. The speakers are
 company executives, investors, fund managers, analysts, economists,
-journalists, and other guests, and their claims cover listed and unlisted
-companies (OpenAI, DeepSeek, MiniMax), institutions (the Federal Reserve, the
-European Central Bank, regulators), and whole markets and industries, not only
-the speaker's own employer. It covers coverage checks, theme sweeps,
-timelines, cross-company comparisons, and media-vs-earnings comparisons.
+journalists, central-bank officials, and other guests, and their claims cover
+listed and unlisted companies (OpenAI, DeepSeek, MiniMax), institutions (the
+Federal Reserve, the European Central Bank, regulators), and whole markets and
+industries, not only the speaker's own employer. It covers coverage checks,
+theme sweeps, timelines, cross-company comparisons, media-vs-earnings
+comparisons, and central-bank position checks.
 
 The corpus is a structured evidence source, not a transcript-reading agent.
 Normal calls perform deterministic lexical retrieval over precomputed
@@ -38,7 +42,55 @@ score second. Do not invert that default when describing unsorted calls.
 `date_from` and `date_to` are inclusive bounds on the video's stored
 publication/upload date. That date may differ from the recording, conference,
 or broadcast date. Label it as the publication date unless the linked source
-independently establishes the event date.
+independently establishes the event date. An official document also carries
+`event_date`, the date of the meeting, speech, or hearing it belongs to. FOMC
+minutes are published about three weeks after the meeting, so a minutes row
+dated 2026-08-19 describes the meeting of 2026-07-29: report the meeting date
+for what the Committee discussed and the publication date for when it became
+public. A press-conference transcript is dated by its publication, and its
+`event_date` is the day of the press conference.
+
+## Official Documents
+
+The same tool searches documents published by central banks and monetary
+authorities from late 2025 onward: the Federal Reserve Board and the regional
+Reserve Banks, the European Central Bank (including its banking-supervision
+arm), the Bank of England, the Bank of Japan, the Reserve Bank of India, the
+People's Bank of China, the Bank of Korea, the Hong Kong Monetary Authority,
+Taiwan's central bank, and the national central banks of the euro area and
+other EU members (the Bundesbank, the Banque de France, the Banca d'Italia,
+the Banco de España, De Nederlandsche Bank, the Riksbank, the Czech National
+Bank, Eesti Pank, and others). Parliamentary debates and hearings of
+legislators are not included; the testimony rows are central-bank officials
+speaking before a legislature.
+
+- A document written in another language yields English paraphrases. Its
+  title may stay in the source language.
+- In result rows, `channel` is the institution name, `video_title` the
+  document title, and
+  `speaker` the official who spoke or wrote; an institutional statement or
+  press release names the institution as its speaker.
+- In a press-conference transcript, a row whose speaker is `Questioner` is a
+  journalist's question, not the institution's position.
+- `institution` (a case-insensitive substring of the publisher, such as
+  `"Bank of Japan"` or `"Bundesbank"`) and `country` (the ISO code of the
+  publisher's jurisdiction: `"US"`, `"IN"`, `"EU"` for the European Central
+  Bank) each restrict every target to official documents. The `channel`
+  filter matches YouTube channels only, so use `institution` to select a
+  publisher.
+- `company` matches what a claim is about, not who published it:
+  `company="European Central Bank"` also returns a Bank of England speech
+  about the ECB. Use `institution` to select the publisher and `company` to
+  select the subject.
+- Official documents carry no ticker, so `coverage` with `institution` or
+  `country` returns one `UNATTRIBUTED` row with the document count, date
+  span, and claim count for that filter.
+- `appearance_type` for official documents: `speech` (also blog posts and
+  opening remarks), `tv_interview` (published interviews), `statement` (also
+  implementation notes), `minutes` (also summaries of opinions),
+  `press_conference`, `testimony`, `hearing`, and `other` (press releases,
+  reports, projections). `document_kind` keeps the finer kind (`interview`,
+  `press_release`, `report`, `blog`, `summary_of_opinions`).
 
 ## Targets and Result Shapes
 
@@ -60,10 +112,16 @@ The public shapes differ:
 
 - `search`, `claims`, `passages`, and `pressure_points` return
   `result_kind`, `canonical_paraphrase`, speaker, primary ticker, topic
-  labels, video title/channel/publication metadata, lexical relevance, and a
-  timestamped YouTube deep link.
+  labels, video title/channel/publication metadata, lexical relevance, and
+  `source_url`: a timestamped YouTube deep link for a video, the episode page
+  for a podcast, or the document page for an official document (a PDF
+  transcript links to the page the finding is on, `...pdf#page=4`). With
+  `detail=true` they also carry `institution`, `document_kind`, and
+  `event_date`, null on interview rows.
 - `appearances` returns video-level title/channel/publication/type metadata,
-  primary ticker, attribution fields, matching-claim count, URL, and relevance.
+  primary ticker, attribution fields, matching-claim count, URL, relevance,
+  and `institution`, `document_kind`, and `event_date` (null on interview
+  rows).
 - `coverage` returns company-level appearance count, publication-date span,
   covered channels, structured-claim count, and low-confidence-attribution count.
 
@@ -77,11 +135,16 @@ The public shapes differ:
 | `company_filter` | Old name of `company`, still accepted with the same behaviour; the response note asks for a plugin update. Do not pass both |
 | `person` | Case-insensitive name substring over finding and/or appearance speaker metadata |
 | `sort` | `relevance` (default) or `newest`, with the exact ordering described above |
-| `appearance_type` | `podcast`, `tv_interview`, `conference`, or `other`; applies to every target |
+| `appearance_type` | Interviews: `podcast`, `tv_interview`, `conference`, or `other`. Official documents: `speech`, `tv_interview`, `statement`, `minutes`, `press_conference`, `testimony`, `hearing`, or `other` (see Official Documents). Applies to every target |
+| `institution` | Case-insensitive substring of the institution that published an official document (`"Bank of Japan"`, `"Federal Reserve"`). Returns only official documents; interview rows have no institution. Combines with `show` and `channel`: when more than one of the three is given, rows that match any of them are returned |
+| `country` | ISO code of the publishing institution's jurisdiction (`"US"`, `"IN"`, `"EU"` for the European Central Bank). Restricts every target to official documents of that jurisdiction |
 | `claim_family` | Claim-ontology code; invalid values return the vocabulary |
 | `date_from`, `date_to` | Inclusive YYYY-MM-DD publication/upload-date bounds |
 | `detail` | Adds normalized claim and attribution fields to finding targets; does not expose source text |
-| `limit` | 1-50 rows; default 15 |
+| `show` | Case-insensitive substring of a podcast show name (`"Odd Lots"`). Returns only podcast episodes. The exact stored show names for a company are listed by `coverage`, so read it first when the name is unknown |
+| `channel` | Case-insensitive substring of a YouTube channel name (`"Bloomberg Television"`). Returns only YouTube videos. When more than one of `show`, `channel`, and `institution` is given, rows that match any of them are returned: `show="Bloomberg", channel="Bloomberg"` returns Bloomberg podcast episodes and Bloomberg YouTube videos in one call. The exact stored channel names for a company are listed by `coverage` |
+| `limit` | One page of 1-50 rows; default 15 |
+| `offset` | Ranked rows to skip before the page; default 0. `limit=15, offset=15` returns rows 16-30 of the same ranking. Every result carries `has_more` and, when more rows follow, `next_offset`; pass that as `offset` for the next page |
 
 Detail does not change catalog rows.
 A `claim_family` filter suppresses passage-card retrieval from blended
@@ -91,11 +154,12 @@ matching structured claims for `appearances` or `coverage`. With
 returns raw transcript text, caption/evidence spans, extraction prompts, or
 other internal provenance.
 
-Every call is capped at 50 rows. When results reach the cap, narrow with
-`company`, `person`, target, `appearance_type`, `claim_family`,
-or a smaller publication-date window and synthesize bounded calls. Never use
-`run_sql` against the gated `transcripts` schema, imply pagination exists,
-or promise a complete transcript dump.
+Every call returns at most 50 rows in one page. When the result says
+`has_more`, read the next page with `offset=next_offset`, or narrow with
+`company`, `person`, `show`, `channel`, target, `appearance_type`,
+`institution`, `country`, `claim_family`, or a smaller publication-date
+window and synthesize bounded calls. Never use `run_sql` against the gated
+`transcripts` schema or promise a complete transcript dump.
 
 ## Evidence Discipline
 
@@ -105,12 +169,14 @@ the speaker's exact words. Every reported finding should include:
 
 - person and role when returned;
 - company/ticker when available;
-- video publication date;
-- video title and channel;
-- timestamped YouTube link.
+- video publication date, and `event_date` for an official document when it
+  differs;
+- video title and channel, or document title and institution;
+- timestamped YouTube link, or the document page link.
 
-Use phrasing such as “In a video published on 2026-05-12, X said that ...” and
-cite the deep link. If exact wording, tone, hedging, or rhetorical emphasis is
+Use phrasing such as “In a video published on 2026-05-12, X said that ...” or
+“In the minutes of the FOMC meeting of 2026-07-29, published 2026-08-19, the
+Committee ...” and cite the link. If exact wording, tone, hedging, or rhetorical emphasis is
 load-bearing, follow the timestamped link and independently verify the source
 before quoting or making a tone claim. `detail=true` does not relax this rule.
 
@@ -125,8 +191,10 @@ disclose the targets, filters, date window, and row cap.
 ### 1. Coverage and date-window selection
 
 1. Call `search_target="coverage"`, usually with one or more exact tickers.
-2. Read the company-level appearance count, publication-date span, channel
-   inventory, structured-claim count, and attribution count.
+   For a central bank, pass `institution` or `country` instead and read the
+   single `UNATTRIBUTED` row it returns.
+2. Read the company-level appearance count, publication-date span, show and
+   channel inventory, structured-claim count, and attribution count.
 3. If attribution is material, inspect `appearances` for the relevant company
    or person rather than treating an acquired-video count as structured
    coverage.
@@ -152,11 +220,14 @@ discussed.
 ### 3. Person or company timeline
 
 1. Check `coverage`, then choose explicit `date_from` and `date_to`.
-2. Filter by ticker and/or `person`; use `appearances` first when identity or
-   attribution needs confirmation.
+2. Filter by ticker and/or `person`, by `show` or `channel` for one podcast
+   or YouTube channel, or by `institution` for a central bank's own
+   timeline; use `appearances` first when identity or attribution
+   needs confirmation.
 3. Search the theme with explicit `sort="newest"`.
-4. If the window is large, split it into non-overlapping date ranges rather
-   than relying on one capped result.
+4. If the window is large, split it into non-overlapping date ranges, or
+   page through one ranking with `offset=next_offset`, rather than relying
+   on one capped result.
 5. Order findings by publication date and preserve venue, audience, and topic
    context. A wording difference between paraphrases is not evidence of a tone
    or position change.
