@@ -138,7 +138,7 @@ The public shapes differ:
 | `claim_family` | Claim-ontology code; invalid values return the vocabulary |
 | `date_from`, `date_to` | Inclusive YYYY-MM-DD publication/upload-date bounds |
 | `detail` | Adds normalized claim and attribution fields to finding targets; does not expose source text |
-| `show` | Case-insensitive substring of the show or channel name (`"Odd Lots"`, `"Les experts"`); applies to every target |
+| `channel` | Case-insensitive substring of the channel that carried the appearance: the podcast show name (`"Odd Lots"`), the YouTube channel, or the institution that published an official document (`"Bank of Japan"`); applies to every target |
 | `limit` | One page of 1-50 rows; default 15 |
 | `offset` | Ranked rows to skip before the page; default 0. `limit=15, offset=15` returns rows 16-30 of the same ranking. Every result carries `has_more` and, when more rows follow, `next_offset`; pass that as `offset` for the next page |
 
@@ -152,7 +152,7 @@ other internal provenance.
 
 Every call returns at most 50 rows in one page. When the result says
 `has_more`, read the next page with `offset=next_offset`, or narrow with
-`company`, `person`, `show`, target, `appearance_type`, `institution`,
+`company`, `person`, `channel`, target, `appearance_type`, `institution`,
 `country`, `claim_family`, or a smaller publication-date window and
 synthesize bounded calls. Never use `run_sql` against the gated
 `transcripts` schema or promise a complete transcript dump.
