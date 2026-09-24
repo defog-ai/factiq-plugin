@@ -66,7 +66,8 @@ speaking before a legislature.
 
 - A document written in another language yields English paraphrases. Its
   title may stay in the source language.
-- `channel` is the institution name, `video_title` the document title, and
+- In result rows, `channel` is the institution name, `video_title` the
+  document title, and
   `speaker` the official who spoke or wrote; an institutional statement or
   press release names the institution as its speaker.
 - In a press-conference transcript, a row whose speaker is `Questioner` is a
@@ -74,7 +75,9 @@ speaking before a legislature.
 - `institution` (a case-insensitive substring of the publisher, such as
   `"Bank of Japan"` or `"Bundesbank"`) and `country` (the ISO code of the
   publisher's jurisdiction: `"US"`, `"IN"`, `"EU"` for the European Central
-  Bank) each restrict every target to official documents.
+  Bank) each restrict every target to official documents. The `channel`
+  filter matches YouTube channels only, so use `institution` to select a
+  publisher.
 - `company` matches what a claim is about, not who published it:
   `company="European Central Bank"` also returns a Bank of England speech
   about the ECB. Use `institution` to select the publisher and `company` to
@@ -133,12 +136,13 @@ The public shapes differ:
 | `person` | Case-insensitive name substring over finding and/or appearance speaker metadata |
 | `sort` | `relevance` (default) or `newest`, with the exact ordering described above |
 | `appearance_type` | Interviews: `podcast`, `tv_interview`, `conference`, or `other`. Official documents: `speech`, `tv_interview`, `statement`, `minutes`, `press_conference`, `testimony`, `hearing`, or `other` (see Official Documents). Applies to every target |
-| `institution` | Case-insensitive substring of the institution that published an official document (`"Bank of Japan"`, `"Federal Reserve"`). Restricts every target to official documents; interview rows have no institution |
+| `institution` | Case-insensitive substring of the institution that published an official document (`"Bank of Japan"`, `"Federal Reserve"`). Returns only official documents; interview rows have no institution. Combines with `show` and `channel`: when more than one of the three is given, rows that match any of them are returned |
 | `country` | ISO code of the publishing institution's jurisdiction (`"US"`, `"IN"`, `"EU"` for the European Central Bank). Restricts every target to official documents of that jurisdiction |
 | `claim_family` | Claim-ontology code; invalid values return the vocabulary |
 | `date_from`, `date_to` | Inclusive YYYY-MM-DD publication/upload-date bounds |
 | `detail` | Adds normalized claim and attribution fields to finding targets; does not expose source text |
-| `channel` | Case-insensitive substring of the channel that carried the appearance: the podcast show name (`"Odd Lots"`), the YouTube channel, or the institution that published an official document (`"Bank of Japan"`); applies to every target |
+| `show` | Case-insensitive substring of a podcast show name (`"Odd Lots"`). Returns only podcast episodes. The exact stored show names for a company are listed by `coverage`, so read it first when the name is unknown |
+| `channel` | Case-insensitive substring of a YouTube channel name (`"Bloomberg Television"`). Returns only YouTube videos. When more than one of `show`, `channel`, and `institution` is given, rows that match any of them are returned: `show="Bloomberg", channel="Bloomberg"` returns Bloomberg podcast episodes and Bloomberg YouTube videos in one call. The exact stored channel names for a company are listed by `coverage` |
 | `limit` | One page of 1-50 rows; default 15 |
 | `offset` | Ranked rows to skip before the page; default 0. `limit=15, offset=15` returns rows 16-30 of the same ranking. Every result carries `has_more` and, when more rows follow, `next_offset`; pass that as `offset` for the next page |
 
@@ -152,9 +156,9 @@ other internal provenance.
 
 Every call returns at most 50 rows in one page. When the result says
 `has_more`, read the next page with `offset=next_offset`, or narrow with
-`company`, `person`, `channel`, target, `appearance_type`, `institution`,
-`country`, `claim_family`, or a smaller publication-date window and
-synthesize bounded calls. Never use `run_sql` against the gated
+`company`, `person`, `show`, `channel`, target, `appearance_type`,
+`institution`, `country`, `claim_family`, or a smaller publication-date
+window and synthesize bounded calls. Never use `run_sql` against the gated
 `transcripts` schema or promise a complete transcript dump.
 
 ## Evidence Discipline
@@ -189,8 +193,8 @@ disclose the targets, filters, date window, and row cap.
 1. Call `search_target="coverage"`, usually with one or more exact tickers.
    For a central bank, pass `institution` or `country` instead and read the
    single `UNATTRIBUTED` row it returns.
-2. Read the company-level appearance count, publication-date span, channel
-   inventory, structured-claim count, and attribution count.
+2. Read the company-level appearance count, publication-date span, show and
+   channel inventory, structured-claim count, and attribution count.
 3. If attribution is material, inspect `appearances` for the relevant company
    or person rather than treating an acquired-video count as structured
    coverage.
@@ -216,8 +220,9 @@ discussed.
 ### 3. Person or company timeline
 
 1. Check `coverage`, then choose explicit `date_from` and `date_to`.
-2. Filter by ticker and/or `person`, or by `institution` for a central
-   bank's own timeline; use `appearances` first when identity or attribution
+2. Filter by ticker and/or `person`, by `show` or `channel` for one podcast
+   or YouTube channel, or by `institution` for a central bank's own
+   timeline; use `appearances` first when identity or attribution
    needs confirmation.
 3. Search the theme with explicit `sort="newest"`.
 4. If the window is large, split it into non-overlapping date ranges, or
