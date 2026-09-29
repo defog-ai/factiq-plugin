@@ -104,6 +104,13 @@ class EarningsDocumentationContractTests(unittest.TestCase):
             # INFY is the US listing; the NSE listing needs the suffix.
             self.assertIn("INFY.NS", normalized)
 
+    def test_swiss_companies_use_the_six_suffix(self):
+        for text in (SKILL_EARNINGS, PLAYBOOK):
+            normalized = " ".join(text.split())
+            self.assertIn("NESN.SW", normalized)
+            # ROP is Roper Technologies; Roche needs the suffix.
+            self.assertIn("ROP.SW", normalized)
+
 
 if __name__ == "__main__":
     unittest.main()

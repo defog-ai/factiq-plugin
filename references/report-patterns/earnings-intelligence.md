@@ -50,7 +50,22 @@ the response reports it in `read_as_exchange_symbol`. Two cases need care:
   and repeat the call with the full `.NS` ticker to get one company.
 
 Indian fiscal years end in March, so `FY2026Q1` of an Indian company is
-April to June 2025. Take the exact period labels from `coverage`.
+April to June 2025.
+
+Companies listed in Switzerland (the SMI and SMI Mid, 47 companies) are
+stored under their SIX symbol with the `.SW` suffix: `ticker="NESN.SW"` for
+Nestlé, `ticker="ROP.SW"` for Roche, `ticker="NOVN.SW"` for Novartis. Use that
+form. A plain Swiss symbol (`ticker="NESN"`) is also read as the `.SW`
+company and reported in `read_as_exchange_symbol`, under the same two rules
+as NSE symbols. Several Swiss symbols are also US tickers: `ticker="ROP"` is
+Roper Technologies and `ticker="CFR"` is Cullen/Frost Bankers, so pass
+`ROP.SW` for Roche and `CFR.SW` for Richemont. Most Swiss companies hold two
+calls a year: the half-year call is stored as Q2 and the full-year call as
+Q4, so `FY2025Q2` is the January to June 2025 half year. A Swiss company's
+fiscal year is named after the calendar year in which it ends; Logitech,
+Richemont and Sonova end theirs in March and Barry Callebaut in August.
+
+Take the exact period labels from `coverage`.
 Treat its live
 `calls_covered`, `earliest_period`, `latest_period`, and `latest_call_date` as
 the authoritative coverage window; do not rely on a static assumption about
