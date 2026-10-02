@@ -10,7 +10,7 @@ and satellite-derived data (fire detections,
 air-quality activity signals,
 rainfall, nighttime lights, shipping and port activity, reservoir levels).
 The agent discovers series, runs read-only SQL, computes derived metrics, and
-returns a sourced answer, terminal preview, or report JSON.
+returns a sourced answer, chart JSON, or report JSON.
 
 No codebase or hosted database is required — only a free
 [FactIQ account](https://factiq.com).
@@ -68,7 +68,7 @@ Code namespaces skills installed from plugins, so its manual invocation is:
 
 | Command | Purpose |
 |---|---|
-| `/factiq:factiq <question>` | Run an analysis and get a sourced answer, terminal chart, or report |
+| `/factiq:factiq <question>` | Run an analysis and get a sourced answer, chart JSON, or report |
 
 Finally, authenticate the MCP server:
 
@@ -195,7 +195,7 @@ Once installed and authenticated, ask a question:
 ```
 
 The agent finds the relevant series, runs the SQL, and replies with a sourced
-answer, terminal chart, or full report, depending on what you ask for. You
+answer, chart JSON, or full report, depending on what you ask for. You
 don't need the slash command: any
 economic or financial data question in any supported client auto-invokes the
 skill.
@@ -297,9 +297,6 @@ Where the behavior lives — the files contributors will touch:
   references: it teaches the dialectical method (thesis → antithesis →
   synthesis) all reports follow and routes each domain to its playbook, so
   adding a playbook doesn't touch SKILL.md
-- `scripts/term_chart.py` — stdlib-only renderer for ANSI/ASCII previews from
-  FactIQ ChartSpec and report JSON objects. It supports bar, simple line, and
-  table fallback renderers
 
 Plugin plumbing — you shouldn't need to touch these:
 
@@ -357,8 +354,6 @@ macro-risk snapshots.
 
 ### Other welcome contributions
 
-- **Terminal renderers** — new chart types or better ASCII/ANSI output in
-  `scripts/term_chart.py` (keep it stdlib-only).
 - **SQL idioms and pitfalls** — additions to `references/data/sql-guide.md`
   from real usage.
 - **Docs and fixes** — anything that makes the agent's first attempt land.

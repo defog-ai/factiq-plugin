@@ -66,9 +66,8 @@ plugin's documentation is worth.
 - Inside a run `CLAUDE_PLUGIN_ROOT` is empty, so the model cannot use it to
   find `scripts/`. It can still reach the checked-out plugin at its real path
   on this machine and in practice finds the scripts by searching. On a
-  machine where the plugin is not on disk, the checks that require
-  `trade_sql.py` or `term_chart.py` fail while the checks on the answer still
-  pass.
+  machine where the plugin is not on disk, the check that requires
+  `trade_sql.py` fails while the checks on the answer still pass.
 - Tool names inside the sandbox are `mcp__plugin_factiq_factiq__<tool>`.
   Every `tool_used` grader on a FactIQ tool uses that form.
 - `--judge-model` sets the model that grades `llm` checks; each such check is
@@ -127,7 +126,7 @@ The fixtures are real payloads taken from the server:
 | Case | What it checks |
 | --- | --- |
 | `latest-value-direct-answer` | A one-number question gets a one-sentence answer with the period and the source, and no chart and no report file. |
-| `quick-chart-of-a-trend` | A single-trend question writes one valid ChartSpec whose title states a finding, renders it with `term_chart.py`, pastes the preview, leaves the missing month empty, and says so. |
+| `quick-chart-of-a-trend` | A single-trend question writes one valid ChartSpec whose title states a finding, leaves the missing month empty, and says so. |
 | `yoy-across-a-missing-month` | Year-over-year is computed by calendar date, and the missing month is stated, not filled in. The server note about the gap is present. |
 | `yoy-without-a-server-hint` | The same request with the server note removed. |
 | `bilateral-trade-sql` | A bilateral-trade query is built with the bundled generator, filters the partner by China customs' numeric code, pins one HS level, and keeps quantity series out of the value total. |

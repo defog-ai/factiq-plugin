@@ -8,7 +8,7 @@ description: >
   levels, shipping, ports, and chokepoints by country, state, or bounding box.
   Use for unemployment, inflation, GDP, wages, energy, trade flows, stocks,
   commodities, forex, earnings intelligence, drought and monsoon conditions,
-  wildfires, economic charts and maps, terminal previews, and research reports.
+  wildfires, economic charts and maps, and research reports.
   Discover series, query read-only SQL, compute, then return a sourced answer or
   local output. Use the bundled SQL generators for bilateral trade.
 ---
@@ -23,7 +23,7 @@ data, do the math, then answer or build a local output.
 
 **Publishing boundary:** FactIQ cannot host charts or reports publicly or
 create public share links. When asked for a FactIQ-hosted link, explain the
-limitation and offer an inline chart or local artifact. Do not inspect or
+limitation and offer a local chart or report file. Do not inspect or
 direct the user to FactIQ's legacy authenticated web interface, use browser
 automation, or probe HTTP endpoints to work around a missing tool. The legacy
 web interface is not a supported product workflow. Normal OAuth connection is
@@ -43,11 +43,11 @@ Three output modes:
   The moment the question wants a trend, a history, a comparison across
   categories or entities, a breakdown, or explicitly asks for a chart or report,
   switch to one of the modes below.
-- **Quick chart** (`term_chart.py`) — one focused local ChartSpec plus an inline
-  terminal preview. Default for a single trend or category comparison. Maps can
-  use a ranked-table terminal fallback; see `references/output/chart-spec.md`.
+- **Quick chart** — one focused ChartSpec saved as a local JSON file. Default
+  for a single trend or category comparison. See
+  `references/output/chart-spec.md`.
 - **Detailed report** — a saved report JSON object with summary, sections,
-  charts, methodology, and terminal previews. Use for broad analytical
+  charts, and methodology. Use for broad analytical
   questions. Covered domains route through `references/report-patterns/README.md`.
   If scope is unclear, use `references/report-patterns/interview-step.md` first.
 
@@ -58,7 +58,6 @@ Three output modes:
 - The local scripts never touch the API:
 
   ```bash
-  python3 "{plugin_root}/scripts/term_chart.py" render ... # terminal ChartSpec preview
   python3 "{plugin_root}/scripts/comext_sql.py" ...   # SQL generator: Eurostat Comext (EU) trade
   python3 "{plugin_root}/scripts/trade_sql.py"  ...   # SQL generator: US/China/India/Korea/Japan/Taiwan customs
   python3 "{plugin_root}/scripts/hs_codes.py"   ...   # HS commodity code <-> name, offline
@@ -234,51 +233,6 @@ include the user's personal details or your conversation. It's one-way — the
 team reviews every report, but nothing comes back — so file it and continue
 with the task; never block on it.
 
-### Terminal charts — `term_chart.py`
-
-`term_chart.py` prints local ANSI/ASCII previews from FactIQ chart objects. It
-never calls FactIQ. Build the ChartSpec from fetched data, save it to JSON, and
-render it:
-
-```bash
-python3 "{plugin_root}/scripts/term_chart.py" render --spec /tmp/factiq-chart.json --width 80 --charset ascii --color auto
-```
-
-For a report, save the report object or a wrapper such as
-`{"question": "...", "report": {...}}` to JSON, then render its charts:
-
-```bash
-python3 "{plugin_root}/scripts/term_chart.py" report --report /tmp/factiq-report.json --width 80 --charset ascii --color auto
-```
-
-After `term_chart.py` renders, paste the preview verbatim into your reply inside
-a triple-backtick code block and provide the saved JSON path.
-
-Supported terminal renderers:
-
-| Renderer | Use when |
-|---|---|
-| `bar` | Categorical comparisons and short ranked lists |
-| `line` | Time-series trends (one or more series) |
-| `table` | Fallback for unsupported chart types or dense data |
-
-Useful options:
-
-| Option | Purpose |
-|---|---|
-| `--type auto\|bar\|line\|table` | Pick the terminal renderer; `auto` maps from `ChartSpec.type` |
-| `--width 80` / `--width auto` | Fixed width by default; `auto` reads the terminal size |
-| `--height N` | Line-chart plot height |
-| `--charset ascii\|unicode-block` | Strict ASCII or denser Unicode block glyphs |
-| `--color auto\|always\|never` | ANSI color control; `auto` respects TTY, `NO_COLOR`, and `TERM=dumb` |
-| `--max-charts N` | Report previews only: cap the number of rendered charts; `0` means all |
-| `--out FILE` | Also save the rendered text |
-
-Because agents often capture command output instead of streaming it directly to
-the user's terminal, use `--charset ascii --color never` for previews you paste
-into the final answer. Use ANSI color for real terminal stdout or saved `.ansi`
-previews.
-
 ## Orchestration workflow
 
 0. **Interview before major forks.** If the request is broad, vague, or about
@@ -399,10 +353,10 @@ previews.
    that states the number, period, and source. Quick-chart mode: build a
    ChartSpec from wide-format data (see `references/output/chart-spec.md`;
    required keys are `title`, `type`, `xField`, `series`, `data`, and a y-axis
-   label goes in `yAxisLabel`), save it to JSON, run `term_chart.py render`, and paste the preview into a fenced
-   code block. Report mode: build and save a report object (see
-   `references/output/report-spec.md`), run `term_chart.py report`, and return
-   the findings, local JSON path, and terminal previews.
+   label goes in `yAxisLabel`), save it to JSON, and return the JSON path with
+   a short statement of what the chart shows. Report mode: build and save a
+   report object (see `references/output/report-spec.md`) and return the
+   findings and the local JSON path.
 
 ## Subagent orchestration
 
@@ -490,9 +444,8 @@ the Read tool. Then embed its entire content in the assembler's prompt.
 Agent prompt template:
 
 ```
-You are a FactIQ report assembler. Build a complete report object, save it, and
-render terminal previews for its charts. Do not do data discovery or fetching;
-all data is provided below.
+You are a FactIQ report assembler. Build a complete report object and save it.
+Do not do data discovery or fetching; all data is provided below.
 
 USER QUESTION: {original_question}
 
@@ -512,17 +465,15 @@ Instructions:
    y_columns (for line/bar), sources, and lineage.
 5. Lineage code must be formatted multi-line SQL/Python with real newlines.
    series_refs must list every series the step used.
-6. Save the full report object to JSON and run:
-   `python3 {plugin_root}/scripts/term_chart.py report --report <json-file> --charset ascii --color never`
-7. Return the JSON path and paste the terminal previews into the reply inside a
-   triple-backtick code block.
+6. Save the full report object to JSON.
+7. Return the JSON path and the key findings.
 ```
 
 Launch the assembler as one subagent (name it `report-assembler`) with the
 spec-plus-findings prompt.
 
 The assembler has the full spec in context, so it builds the report object,
-saves the JSON, and returns the local path plus terminal previews.
+saves the JSON, and returns the local path plus the key findings.
 
 ### Example decomposition
 
@@ -538,7 +489,7 @@ After step 2 (catalog + discovery), you identify three independent threads:
 
 Spawn three research agents in parallel. When all return, spawn one assembler
 agent with the spec and all three findings blocks. The assembler builds a
-3-section report, saves it, renders terminal previews, and returns both.
+3-section report, saves it, and returns the path and findings.
 
 ### When NOT to use subagents
 
@@ -578,8 +529,7 @@ Ground rules:
   chart.
 
 Check the report object against `references/output/report-spec.md`, save it to
-JSON, and render it with `term_chart.py report`. Return the report findings, the
-local JSON path, and visible terminal previews.
+JSON. Return the report findings and the local JSON path.
 
 ## Context budget — the 50-row cap
 
@@ -656,7 +606,7 @@ which is also all it needs.
 
 **`references/output/`** — local output formats:
 
-- `chart-spec.md` — ChartSpec format, chart-type selection, terminal rendering, and a worked example.
+- `chart-spec.md` — ChartSpec format, chart-type selection, and a worked example.
 - `report-spec.md` — report JSON format: sections, per-chart fields,
   sources, lineage, limits, and a worked example.
 

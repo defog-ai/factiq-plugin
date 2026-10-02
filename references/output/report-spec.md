@@ -1,8 +1,8 @@
 # Report JSON local output format
 
 A FactIQ report object contains a summary, sections of narrative and charts,
-source details, lineage, and optional methodology notes. Save it as local JSON
-and render its charts with `term_chart.py`.
+source details, lineage, and optional methodology notes. Save it as local
+JSON.
 
 A recommended wrapper is:
 
@@ -313,9 +313,7 @@ per narrative, and 5,000 characters for the summary.
    don't hand-type data rows.
 4. Save the report object or a wrapper such as
    `{"question": "...", "report": {...}}` to JSON.
-5. Render terminal previews from the saved report JSON:
-   `python3 "{plugin_root}/scripts/term_chart.py" report --report <file> --charset ascii --color never`
-6. Return the JSON path, key findings, and terminal previews.
+5. Return the JSON path and key findings.
 
 ## Specialized report patterns
 
