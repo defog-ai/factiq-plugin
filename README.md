@@ -304,6 +304,9 @@ Plugin plumbing — you shouldn't need to touch these:
   OAuth). Read by both Claude Code and Codex plugin loaders
 - `.claude-plugin/` — Claude and Claude Code plugin + marketplace manifests
 - `.codex-plugin/` — ChatGPT and Codex plugin manifest
+- `.app.json` — links the plugin to the FactIQ app registered in ChatGPT, so
+  ChatGPT shows the FactIQ Data Explorer in its sidebar and beside a
+  conversation
 - `.agents/plugins/marketplace.json` — Codex marketplace entry for
   `codex plugin marketplace add defog-ai/factiq-plugin`
 
