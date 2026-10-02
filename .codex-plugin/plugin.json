@@ -1,7 +1,7 @@
 {
-  "name": "factiq",
+  "name": "app-6a8fc5639bb88191a76a294a337dade2",
   "description": "Answer economic and financial data questions with real FactIQ data — official data, markets, earnings calls, executive media appearances, central-bank documents, and satellite-derived signals including crop fires and wildfires — then return sourced answers, chart JSON, or report JSON.",
-  "version": "0.41.0",
+  "version": "0.41.1",
   "author": {
     "name": "FactIQ",
     "url": "https://www.factiq.com"
@@ -18,11 +18,10 @@
   ],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
-  "apps": "./.app.json",
   "interface": {
     "displayName": "FactIQ",
     "shortDescription": "Investment and economic data",
-    "longDescription": "FactIQ gives ChatGPT and Codex primarily read-only access to sourced investment and economic data through one normalized warehouse. Research official statistics across the US, UK, EU, China, India, Singapore, and international institutions; inspect company filings and earnings-call intelligence; query market prices, business news, executive media appearances, trade, and satellite-derived signals such as rainfall, fires, air quality, nighttime lights, shipping, and reservoir levels. FactIQ can discover datasets, run read-only SQL, calculate comparisons, return sourced analysis, and create inline charts. A free FactIQ account is enough to connect. FactIQ records connector tool inputs and outputs for reliability and support as described in the privacy policy. `send_feedback` is the only write tool and sends a short issue report to the FactIQ team; it does not modify research data.",
+    "longDescription": "FactIQ gives ChatGPT and Codex primarily read-only access to sourced investment and economic data through one normalized warehouse. Research official statistics across the US, UK, EU, China, India, Singapore, and international institutions; inspect company filings and earnings-call intelligence; query market movements, business news, executive media appearances, trade, and satellite-derived signals such as rainfall, fires, air quality, nighttime lights, shipping, and reservoir levels. FactIQ can discover datasets, run read-only SQL, calculate comparisons, return sourced analysis, and create inline charts. A FactIQ account is required to connect. FactIQ records connector tool inputs and outputs for reliability and support as described in the privacy policy. `send_feedback` is the only write tool and sends a short issue report to the FactIQ team; it does not modify research data.",
     "developerName": "FactIQ",
     "category": "Finance",
     "capabilities": [
