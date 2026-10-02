@@ -79,7 +79,7 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
         apps = json.loads((ROOT / ".app.json").read_text(encoding="utf-8"))
         self.assertEqual(list(apps["apps"]), ["factiq"])
         self.assertRegex(
-            apps["apps"]["factiq"]["id"], r"^(plugin_)?asdk_app_[0-9a-f]{32}$"
+            apps["apps"]["factiq"]["id"], r"^asdk_app_[0-9a-f]{32}$"
         )
 
     def test_codex_listing_copy_and_assets_fit_directory_constraints(self):
