@@ -1,8 +1,8 @@
 # ChartSpec local output format
 
-ChartSpec is the structured JSON format used by `term_chart.py` and local
-FactIQ chart workflows. Save the object to JSON so the values, sources, and
-lineage remain available with the rendered preview.
+ChartSpec is the structured JSON format used by local FactIQ chart workflows.
+Save the object to JSON so the values, sources, and lineage remain available
+with the chart.
 
 ## Minimal valid spec
 
@@ -201,7 +201,5 @@ Two rules the panel depends on:
    x-axis.
 3. Validate locally that every `series[].key` and `xField.key` exists in the
    data rows. Include `sources[]` and `lineage` so the output remains auditable.
-4. Save the final spec to JSON and render a terminal preview:
-   `python3 "{plugin_root}/scripts/term_chart.py" render --spec <file> --charset ascii --color never`
-5. Return the JSON path and paste the terminal preview into your reply inside a
-   triple-backtick code block.
+4. Save the final spec to JSON.
+5. Return the JSON path with a short statement of what the chart shows.
