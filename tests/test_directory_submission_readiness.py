@@ -69,18 +69,16 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
         )
         self.assertEqual(claude["version"], codex["version"])
 
-    def test_codex_manifest_links_the_registered_chatgpt_app(self):
+    def test_codex_manifest_uses_the_registered_chatgpt_app_identity(self):
         codex = json.loads(
             (ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(codex["apps"], "./.app.json")
-        self.assertEqual(codex["mcpServers"], "./.mcp.json")
-
-        apps = json.loads((ROOT / ".app.json").read_text(encoding="utf-8"))
-        self.assertEqual(list(apps["apps"]), ["factiq"])
-        self.assertRegex(
-            apps["apps"]["factiq"]["id"], r"^asdk_app_[0-9a-f]{32}$"
+        self.assertEqual(
+            codex["name"], "app-6a8fc5639bb88191a76a294a337dade2"
         )
+        self.assertEqual(codex["mcpServers"], "./.mcp.json")
+        self.assertNotIn("apps", codex)
+        self.assertFalse((ROOT / ".app.json").exists())
 
     def test_codex_listing_copy_and_assets_fit_directory_constraints(self):
         manifest = json.loads(
@@ -93,12 +91,12 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
             "investment and economic data through one normalized warehouse. "
             "Research official statistics across the US, UK, EU, China, India, "
             "Singapore, and international institutions; inspect company filings "
-            "and earnings-call intelligence; query market prices, business news, "
+            "and earnings-call intelligence; query market movements, business news, "
             "executive media appearances, trade, and satellite-derived signals "
             "such as rainfall, fires, air quality, nighttime lights, shipping, and "
             "reservoir levels. FactIQ can discover datasets, run read-only SQL, "
             "calculate comparisons, return sourced analysis, and create inline "
-            "charts. A free FactIQ account is enough to connect. FactIQ records "
+            "charts. A FactIQ account is required to connect. FactIQ records "
             "connector tool inputs and outputs for reliability and support as "
             "described in the privacy policy. `send_feedback` is the only write "
             "tool and sends a short issue report to the FactIQ team; it does not "
