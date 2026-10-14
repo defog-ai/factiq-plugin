@@ -4,7 +4,8 @@ Satellite-derived indicators, fetched live from the provider and aggregated
 over a region server-side. Use them when official statistics are too slow for
 the question or don't cover it: crop burning as it happens, industrial
 activity from emissions, smoke and haze episodes, monsoon rainfall by state,
-heatwaves, agricultural drought.
+heatwaves, agricultural drought, and the wind and humidity that explain
+changes in air pollution.
 
 Read this before the first `get_geo_data` call in a session.
 
@@ -40,6 +41,8 @@ sections below. Passing either for another dataset is an error.
 | `precip_imerg` | Rainfall (NASA IMERG V07 Late, 0.1°) | Global drought, flood, and water-supply context where CHIRPS has no coverage | 2000→ | ~1–2 days |
 | `temperature_power` | 2 m air temperature mean/max/min (NASA POWER, MERRA-2 0.5°) | Heatwaves → electricity demand, labour productivity, crop stress | 1981→ | ~3 days |
 | `soil_moisture_power` | Root-zone soil wetness 0–1 (NASA POWER, MERRA-2) | Sowing conditions and agricultural drought ahead of production data | 1981→ | ~3 days |
+| `wind_power` | 10 m wind speed, daily maximum, eastward (`u_wind_ms`) and northward (`v_wind_ms`) components, direction the wind blows from (`wind_from_deg`), steadiness 0–1 (NASA POWER, MERRA-2 0.5°) | Whether a change in NO₂, CO or smoke comes from emissions or from weather (strong wind dilutes pollution); which way smoke travels (pair with `fires_viirs`); wind conditions for wind-power output | 1981→ | ~3 days |
+| `humidity_power` | 2 m relative humidity, % (NASA POWER, MERRA-2 0.5°) | Weather control for haze and fine particles, which grow in humid air; heat stress together with `temperature_power` | 1981→ | ~3 days |
 
 ## Regions
 
@@ -197,6 +200,14 @@ vegetation fires either way, so the newest data is never silently missing.
 - POWER datasets are 0.5° reanalysis — honest at state/country scale, blind to
   city microclimates. Very small or very large regions sample the centroid
   cell (a `notes` entry appears for large ones).
+- `wind_power`: `wind_from_deg` is the bearing the wind blows **from**
+  (0 = north, 90 = east, 270 = west), computed from the average of the
+  wind components over the region and the interval. Winds from opposite
+  directions cancel, so read `wind_steadiness` first: near 1 the wind kept
+  one direction; below ~0.3 it kept changing and the direction says little.
+  Over a large region, winds in different parts also cancel — use a state or
+  a bbox, not a whole country, to say where smoke came from.
+  `wind_speed_ms` is the average speed and is not affected by this.
 - `notes` can also report partially failed fetches ("may undercount — retry").
   Retry once before using such a result.
 
