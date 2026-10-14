@@ -71,6 +71,7 @@ States lists the tables to use.
 
 | Schema | Source | Coverage |
 |---|---|---|
+| `eu` | Eurostat, ECB, EEA | Curated EU and euro-area indicators, ECB policy rates and euro reference exchange rates, EEA greenhouse-gas emissions, and EU ETS registry and revenue data |
 | `eu_comext_<iso2>` | Eurostat Comext | One schema per EU member-state reporter; monthly imports and exports by partner and detailed CN8 product, with trade value in euros and separate weight or supplementary-quantity series |
 
 Use the reporter's lowercase ISO2 code: `eu_comext_de` for Germany,
@@ -125,7 +126,6 @@ The `uk` schema holds six datasets (filter on `dataset_code`):
 | `worldbank` | World Bank | Development and macro indicators by country |
 | `singstat` | Singapore Department of Statistics | About 1,050 tables across the economy, society, industry, trade and population |
 | `sg_health` | Singapore Ministry of Health | Weekly infectious-disease case counts and average daily polyclinic attendances for acute conditions, from 2015 |
-| `eu` | Eurostat, ECB, EEA | Curated EU and euro-area indicators, ECB policy rates and euro reference exchange rates, EEA greenhouse-gas emissions, and EU ETS registry and revenue data |
 | `bis` | Bank for International Settlements | Central-bank policy rates for 49 economies (monthly, some from the 1940s, and daily), debt service ratios of households and companies for 32 economies, and total credit to the non-financial sector by borrower for 44 economies |
 | `who_gho` | WHO Global Health Observatory | Headline WHO indicators, one value per country and year for about 240 countries: childhood immunization, maternal and neonatal mortality, tobacco use, life expectancy, hospital beds, UHC service-coverage index |
 | `health_systems` | WHO, Eurostat | Cross-country health-system detail: health-financing shares (out-of-pocket, government, private, external), doctors and hospital beds per 10,000 people, UHC and cataract surgical coverage, Eurostat hospital use, and burden of disease 2000–2021 (DALY, YLL, YLD by age, sex and cause) |
