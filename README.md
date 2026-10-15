@@ -1,7 +1,7 @@
 # FactIQ - a real-time finance and economy database for AI Agents
 
 Turn your agent into a finance and economy analyst. This plugin for Claude
-(web, desktop, and Cowork), ChatGPT Desktop, Claude Code, and Codex gives the
+(web, desktop, and Cowork), ChatGPT (web and desktop), Claude Code, and Codex gives the
 agent direct access to
 FactIQ's warehouse of official statistics — SEC filings, US, China, India, Korea, IMF,
 World Bank, and more — plus live market data, earnings-call transcripts,
@@ -27,26 +27,41 @@ setup and plan requirements, which can change faster than this repository:
 | Client | Supported surfaces | Setup guide |
 |---|---|---|
 | Claude | Web, desktop, and Cowork | [factiq.com/claude](https://www.factiq.com/claude) |
-| ChatGPT | Desktop app (including Codex in the app) | [factiq.com/chatgpt](https://www.factiq.com/chatgpt) |
+| ChatGPT | Web and desktop app (including Codex in the app) | [factiq.com/chatgpt](https://www.factiq.com/chatgpt) |
 | Claude Code | CLI, desktop app, and IDE extensions | [factiq.com/claude-code](https://www.factiq.com/claude-code) |
 | Codex | CLI | [factiq.com/codex](https://www.factiq.com/codex) |
 
 ### Claude (web, desktop, and Cowork)
 
-For the best experience, use Cowork. In Claude, open **Customize → Plugins**,
-add `defog-ai/factiq-plugin` as a personal marketplace, install FactIQ, and
-complete the browser sign-in. The full plugin requires a paid Claude plan;
-Claude Free can use the connector-only setup. See the
-[Claude guide](https://www.factiq.com/claude) for the current steps,
-organization-policy notes, and connector-only alternative.
+FactIQ is listed in the official Claude directory. Open
+[claude.ai/directory/factiq](https://claude.ai/directory/factiq) while signed
+in to Claude, click **Connect**, complete the FactIQ sign-in, and start a new
+chat. You can also find it under **Customize → Plugins** by searching for
+FactIQ. For the best experience, use Cowork. The plugin requires a paid Claude
+plan.
 
-### ChatGPT Desktop
+To install from this repository instead, open **Customize → Plugins**, add
+`defog-ai/factiq-plugin` as a personal marketplace, install FactIQ, and
+complete the browser sign-in. Organizations that approve plugins centrally can
+mirror this repository as a private marketplace. See the
+[Claude guide](https://www.factiq.com/claude) for the current steps and
+organization-policy notes.
 
-In the ChatGPT desktop app, open **Plugins**, add
-`defog-ai/factiq-plugin` as a marketplace, install FactIQ from the Personal
-tab, and complete the browser sign-in. Custom plugins currently require a
-ChatGPT Pro, Business, Enterprise, or Edu plan. This installation also covers
-Codex inside the ChatGPT app; Codex CLI uses the separate setup below. See the
+### ChatGPT (web and desktop)
+
+FactIQ is listed in the official ChatGPT plugin directory. Open the
+[FactIQ listing](https://chatgpt.com/plugins/plugin_asdk_app_6a8fc5639bb88191a76a294a337dade2)
+while signed in to ChatGPT, click **Install plugin**, complete the FactIQ
+sign-in, and start a new chat. Type `@FactIQ` to select it explicitly. This
+works on ChatGPT Plus, Pro, Business, Enterprise, and Edu plans, on the web and
+in the desktop app. On Business, Enterprise, and Edu, a workspace admin may need
+to allow FactIQ first. The install also covers Codex inside the ChatGPT app;
+Codex CLI uses the separate setup below.
+
+To install from this repository instead, open **Plugins** in the ChatGPT
+desktop app, add `defog-ai/factiq-plugin` as a marketplace, and install FactIQ
+from the Personal tab. This path works only in the desktop app, on a Pro,
+Business, Enterprise, or Edu plan. See the
 [ChatGPT guide](https://www.factiq.com/chatgpt) for the current plan matrix and
 troubleshooting steps.
 
