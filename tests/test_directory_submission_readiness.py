@@ -13,7 +13,8 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
 
         for expected in (
             "Claude (web, desktop, and Cowork)",
-            "ChatGPT Desktop",
+            "ChatGPT (web and desktop)",
+            "https://claude.ai/directory/factiq",
             "https://www.factiq.com/claude",
             "https://www.factiq.com/chatgpt",
             "https://www.factiq.com/claude-code",
