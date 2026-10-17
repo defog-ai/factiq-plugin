@@ -19,15 +19,15 @@ Here {plugin_root} is the absolute directory containing the plugin manifests.
 from __future__ import annotations
 
 import argparse
-import gzip
+import glob
 import json
 import os
 import re
 import sys
 
-DATA_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "data", "hs_names.json.gz"
-)
+# The nomenclature is split into plain JSON files (one per level, and the
+# subheadings by first digit) so that every file stays small and readable.
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "hs_names")
 
 
 def fail(message: str, code: int = 1) -> None:
@@ -46,21 +46,32 @@ def positive_int(text: str) -> int:
 
 
 def load_names() -> dict[str, dict[str, str]]:
-    try:
-        with gzip.open(DATA_PATH, "rt", encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, EOFError, UnicodeError, json.JSONDecodeError) as exc:
-        fail(f"cannot read bundled HS names at {DATA_PATH}: {exc}")
-    if not isinstance(data, dict) or any(
+    paths = sorted(glob.glob(os.path.join(DATA_DIR, "*.json")))
+    if not paths:
+        fail(f"cannot find bundled HS names in {DATA_DIR}")
+    data: dict[str, dict[str, str]] = {}
+    for path in paths:
+        try:
+            with open(path, encoding="utf-8") as f:
+                part = json.load(f)
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            fail(f"cannot read bundled HS names at {path}: {exc}")
+        if not isinstance(part, dict) or any(
+            not isinstance(names, dict) for names in part.values()
+        ):
+            fail(f"bundled HS names at {path} have an invalid shape")
+        for level, names in part.items():
+            data.setdefault(level, {}).update(names)
+    if any(
         not isinstance(data.get(level), dict) for level in ("2", "4", "6")
     ):
-        fail(f"bundled HS names at {DATA_PATH} have an invalid shape")
+        fail(f"bundled HS names in {DATA_DIR} have an invalid shape")
     if any(
         not isinstance(code, str) or not isinstance(name, str)
         for level in ("2", "4", "6")
         for code, name in data[level].items()
     ):
-        fail(f"bundled HS names at {DATA_PATH} have an invalid shape")
+        fail(f"bundled HS names in {DATA_DIR} have an invalid shape")
     return data
 
 
