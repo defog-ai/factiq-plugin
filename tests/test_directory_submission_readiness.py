@@ -1,4 +1,5 @@
 import json
+import re
 import struct
 import unittest
 from pathlib import Path
@@ -60,6 +61,59 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
         self.assertTrue(plugin["keywords"])
         self.assertTrue(marketplace["description"])
         self.assertEqual(marketplace["owner"], expected_publisher)
+
+    def test_marketplace_entry_repeats_the_plugin_description(self):
+        plugin = json.loads(
+            (ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
+        )
+        marketplace = json.loads(
+            (ROOT / ".claude-plugin" / "marketplace.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        (entry,) = marketplace["plugins"]
+        self.assertEqual(entry["description"], plugin["description"])
+
+    def test_bundled_files_are_text_or_images_and_small(self):
+        # The plugin directory holds a version for manual review when it
+        # bundles a binary that is not an image or font, a file over 256 KiB,
+        # or more than 512 files.
+        allowed_binary = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
+        files = [
+            p
+            for p in ROOT.rglob("*")
+            if p.is_file()
+            and not {".git", "__pycache__", ".pytest_cache", "results"}
+            & set(p.relative_to(ROOT).parts)
+        ]
+        self.assertLessEqual(len(files), 512)
+        for path in files:
+            name = path.relative_to(ROOT).as_posix()
+            self.assertFalse(path.is_symlink(), name)
+            self.assertNotEqual(path.name, ".DS_Store", name)
+            if path.suffix.lower() in allowed_binary:
+                continue
+            self.assertLessEqual(path.stat().st_size, 256 * 1024, name)
+            try:
+                path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                self.fail(f"{name} is a binary file that is not an image")
+
+    def test_docs_do_not_send_a_credential_from_the_environment(self):
+        # A README example that reads a key from the user's environment and
+        # sends it to a server holds the version for manual review.
+        docs = [
+            ROOT / "README.md",
+            ROOT / "SETUP.md",
+            *ROOT.glob("skills/**/*.md"),
+            *ROOT.glob("references/**/*.md"),
+        ]
+        for path in docs:
+            text = path.read_text(encoding="utf-8")
+            self.assertIsNone(
+                re.search(r"Bearer \$|bearer-token-env-var|\$\{?[A-Z_]*(KEY|TOKEN)\b", text),
+                path.relative_to(ROOT).as_posix(),
+            )
 
     def test_claude_and_codex_versions_stay_in_sync(self):
         claude = json.loads(
