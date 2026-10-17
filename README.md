@@ -162,44 +162,32 @@ Then authorize with `/mcp`.
 ### Without a browser: scripts, CI, and headless agents
 
 Every FactIQ tool also works with a personal API key instead of the browser
-sign-in. Create the key at [factiq.com/settings/security](https://www.factiq.com/settings/security)
-and send it as a bearer token. The full reference, with a REST endpoint table
-and Python examples, is at
-[factiq.com/docs/api](https://www.factiq.com/docs/api).
+sign-in. Create the key at [factiq.com/settings/security](https://www.factiq.com/settings/security).
+The guide at [factiq.com/docs/api](https://www.factiq.com/docs/api) shows how
+to call the REST endpoints and the MCP server with the key, and how to register
+the server in Claude Code or Codex without a browser. Keep the key out of
+source control. Regenerating it on the settings page revokes the old one
+immediately.
 
-Call a REST endpoint:
+## What the plugin sends and runs
 
-```bash
-curl https://api.factiq.com/tools/context \
-  -H "Authorization: Bearer $FACTIQ_API_KEY"
-```
-
-Call an MCP tool over plain HTTP (one JSON-RPC POST, no session handshake):
-
-```bash
-curl https://api.factiq.com/mcp \
-  -H "Authorization: Bearer $FACTIQ_API_KEY" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call",
-       "params":{"name":"get_data_catalog","arguments":{}}}'
-```
-
-Register the MCP server with the key so a headless coding agent never opens a
-browser:
-
-```bash
-# Claude Code
-claude mcp add factiq https://api.factiq.com/mcp --transport http \
-  --header "Authorization: Bearer $FACTIQ_API_KEY"
-
-# Codex (reads the key from the environment variable at start-up)
-codex mcp add factiq --url https://api.factiq.com/mcp \
-  --bearer-token-env-var FACTIQ_API_KEY
-```
-
-Keep the key out of source control. Regenerating it on the settings page
-revokes the old one immediately.
+- **One remote MCP server.** The plugin adds `https://api.factiq.com/mcp`
+  (see `.mcp.json`), which you sign in to with OAuth. Each tool call sends its
+  arguments (search terms, SQL statements, series IDs, tickers, regions) to
+  that server and returns FactIQ data. FactIQ records connector tool inputs
+  and outputs for reliability and support, as described in the
+  [privacy policy](https://www.factiq.com/privacy).
+- **One tool that sends a message.** `send_feedback` sends a short report,
+  written by the agent, to the FactIQ team when a FactIQ result looks wrong.
+  It changes no data. Every other tool only reads data.
+- **Local scripts with no network access.** The skill can run the Python
+  scripts in `scripts/` (`hs_codes.py`, `trade_sql.py`, `comext_sql.py`,
+  `series_math.py`). They read only their arguments, files you pass them, and
+  the bundled files in `scripts/data/`, and they print their result. They make
+  no network calls.
+- **Local outputs only.** Charts and reports are files written in your own
+  workspace. The plugin does not publish them anywhere.
+- The plugin has no hooks and runs nothing when it is installed.
 
 ## Try it
 

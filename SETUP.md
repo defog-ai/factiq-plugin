@@ -46,20 +46,9 @@ installed yet, the user can open
 
 When no browser is available, the user registers the MCP server with an API
 key instead of signing in. Point them to
-[factiq.com/docs/api](https://www.factiq.com/docs/api) for the full guide. The
-short form:
-
-```bash
-# Claude Code
-claude mcp add factiq https://api.factiq.com/mcp --transport http \
-  --header "Authorization: Bearer $FACTIQ_API_KEY"
-
-# Codex
-codex mcp add factiq --url https://api.factiq.com/mcp \
-  --bearer-token-env-var FACTIQ_API_KEY
-```
-
-The key must come from the user's own environment. Do not read it from a file,
+[factiq.com/docs/api](https://www.factiq.com/docs/api), which has the
+commands for Claude Code and Codex. The user creates the key and sets it up
+themselves. Do not read a key from the user's environment or from a file,
 print it, or write it into a commit.
 
 ## Verify the connection
