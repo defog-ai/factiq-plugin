@@ -252,8 +252,9 @@ Exact series IDs are mandatory here, not just faster. Each country catalog
 holds millions of series, and the text collation is not byte-ordered, so
 `series_id LIKE 'prefix%'` cannot run on the index (it scans the table and
 hits the 30-second timeout) and `>=`/`<` string ranges over `series_id`
-return wrong or empty results. Equality joins on constructed IDs are index
-probes and stay fast at any scale.
+return wrong or empty results. Equality joins on constructed IDs avoid those
+scans. Their time still grows with the date range and with the number of
+reporter schemas in one statement, so keep both small.
 
 Use these rules:
 
@@ -262,8 +263,8 @@ Use these rules:
   `product_name`, `hs2_code`, `hs4_code`, or `hs6_code`.
   It is a complete product-code lookup, including historical codes and their
   first and last observed dates.
-- Build exact series IDs and join them to `data_points`, whose `series_id`
-  index makes the fetch fast. The detailed ID shape is
+- Build exact series IDs and join them to `data_points`; an exact
+  `series_id` match avoids the pattern scan. The detailed ID shape is
   `eu_comext_{M|X}_{reporter}_{partner}_{te|ti|tl}_p1_cn8_{product_code}_{eur|kg|su}`.
   `M` means imports and `X` exports. Reporter and partner are lowercase ISO2
   codes, except that `xi` is Eurostat's code for Northern Ireland. The stored
@@ -282,10 +283,13 @@ Use these rules:
   every CN8 product.
 - For several reporters, either run one already-aggregated query per reporter
   schema and combine the small results locally, or `UNION ALL` the
-  per-reporter aggregations in a single call — a union of exact-ID joins
-  across all 27 member schemas completes well within the 30-second limit.
-  What times out is pattern scanning, not combining: every branch must use
-  the exact-ID join, never a `series_id` pattern.
+  per-reporter aggregations in a single call. The API accepts at most 5
+  Comext country schemas in one statement that reads `data_points`, and
+  refuses a statement with more. For more reporters (or all 27), send
+  further groups of at most 5 one after another, not at the same time, and
+  combine the results locally. `comext_sql.py` splits a longer reporter list
+  into such groups for you. Every branch must use the exact-ID join, never a
+  `series_id` pattern.
 
 To inspect product mappings, qualify the shared table from any country query:
 
@@ -333,8 +337,8 @@ WHERE series_id = 'eu_comext_M_de_cn_te_p1_cn6_total_eur'
 ORDER BY time;
 ```
 
-For several reporters in one call, `UNION ALL` the same exact-ID aggregation
-per country schema. This tested example returns 2025 German- and
+For several reporters (at most 5) in one call, `UNION ALL` the same exact-ID
+aggregation per country schema. This tested example returns 2025 German- and
 French-reported electronics (HS chapter 85) imports from China; run it with
 `schema="eu_comext_de"` (any Comext schema works as the default):
 
