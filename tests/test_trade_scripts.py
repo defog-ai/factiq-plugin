@@ -198,6 +198,87 @@ class SqlGeneratorTests(unittest.TestCase):
         self.assertNotEqual(self_only.returncode, 0)
         self.assertIn("no domestic trade series", self_only.stderr)
 
+    def test_comext_splits_more_than_five_reporters_into_statements(self):
+        common = (
+            "--partner",
+            "cn",
+            "--flow",
+            "imports",
+            "--start",
+            "2025-01",
+            "--end",
+            "2025-12",
+        )
+        for args in (
+            ("total", "--reporters", "all", *common),
+            ("total", "--reporters", "all", *common, "--monthly"),
+            ("products", "--reporters", "all", *common, "--top", "10"),
+            ("trend", "--reporters", "all", *common, "--hs", "8507"),
+        ):
+            with self.subTest(args=args[0]):
+                result = run_script("comext_sql.py", *args)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("this request is 6 statements", result.stdout)
+                header, *parts = result.stdout.split("\n-- statement ")
+                self.assertNotIn("data_points", header)
+                self.assertEqual(len(parts), 6)
+                reporters = []
+                for number, part in enumerate(parts, start=1):
+                    self.assertTrue(part.startswith(f"{number} of 6: reporters "))
+                    read = [
+                        line.split("eu_comext_")[1][:2]
+                        for line in part.splitlines()
+                        if ".data_points" in line
+                    ]
+                    self.assertLessEqual(len(read), 5)
+                    self.assertIn(f'schema="eu_comext_{read[0]}"', part)
+                    reporters += read
+                self.assertEqual(len(reporters), 27)
+                self.assertEqual(len(set(reporters)), 27)
+
+    def test_comext_split_products_keep_fifty_codes_per_statement(self):
+        result = run_script(
+            "comext_sql.py",
+            "products",
+            "--reporters",
+            "de,fr,it,es,nl,pl",
+            "--partner",
+            "cn",
+            "--flow",
+            "imports",
+            "--start",
+            "2025-01",
+            "--end",
+            "2025-12",
+            "--top",
+            "10",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.count("LIMIT 50;"), 2)
+        self.assertNotIn("LIMIT 10;", result.stdout)
+        self.assertIn("keep the top 10", result.stdout)
+
+    def test_comext_split_keeps_the_domestic_reporter_note(self):
+        result = run_script(
+            "comext_sql.py",
+            "total",
+            "--reporters",
+            "all",
+            "--partner",
+            "de",
+            "--flow",
+            "imports",
+            "--start",
+            "2025-01",
+            "--end",
+            "2025-12",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("domestic reporter de omitted", result.stdout)
+        self.assertNotIn("eu_comext_de.data_points", result.stdout)
+        self.assertEqual(result.stdout.count(".data_points"), 26)
+        self.assertIn("this request is 6 statements", result.stdout)
+
     def test_comext_uses_the_trade_token_valid_for_each_month(self):
         common = (
             "--reporters",

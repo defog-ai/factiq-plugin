@@ -64,7 +64,8 @@ monthly rows for short windows, annual or YTD summaries for long ones.
    only sets the default search path; qualified cross-schema references (for
    example `korea_trade.series` from an `india_trade` call) do execute, so a
    `UNION ALL` of per-reporter aggregations in one call is allowed when every
-   branch converts to a common unit. The reason to keep reporters separate is
+   branch converts to a common unit (for Eurostat Comext, at most 5 country
+   schemas per statement). The reason to keep reporters separate is
    the data, not the tool: mirror sources differ on units, valuation, timing,
    and definitions, so never mix raw values from two reporters in a single
    expression. Fetch comparable aggregates, normalize units, then compare.
