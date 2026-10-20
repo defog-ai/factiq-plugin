@@ -263,8 +263,8 @@ Use these rules:
   `product_name`, `hs2_code`, `hs4_code`, or `hs6_code`.
   It is a complete product-code lookup, including historical codes and their
   first and last observed dates.
-- Build exact series IDs and join them to `data_points`, whose `series_id`
-  index makes the fetch fast. The detailed ID shape is
+- Build exact series IDs and join them to `data_points`; an exact
+  `series_id` match avoids the pattern scan. The detailed ID shape is
   `eu_comext_{M|X}_{reporter}_{partner}_{te|ti|tl}_p1_cn8_{product_code}_{eur|kg|su}`.
   `M` means imports and `X` exports. Reporter and partner are lowercase ISO2
   codes, except that `xi` is Eurostat's code for Northern Ireland. The stored
