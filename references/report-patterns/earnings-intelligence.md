@@ -272,6 +272,13 @@ quote-filled text panels.
   `refused_number`) into an affirmative claim.
 - Do not build a multi-period scorecard from one quarter of coverage. State
   the live coverage window and the exact fiscal periods actually compared.
+- A figure that management restates from call to call (a share of sales,
+  product or channel mix, guidance, a target) is only "the latest" after you
+  have searched the call at `latest_period` for the same topic. Search the
+  topic with the ticker and no `quarter_filter`, and if the newest row is not
+  from `latest_period`, search that call by itself. When the latest call does
+  not repeat the figure, report the newest call that does and say that the
+  later calls did not update it. Always give the call date beside the figure.
 
 ## Methodology Language To Include
 

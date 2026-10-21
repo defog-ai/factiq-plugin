@@ -167,6 +167,14 @@ Canonical call patterns:
   partial-term rows before merging them.
 - **Disclosure habits:** call `disclosure_profile` with one ticker; do not add a
   quarter or treat the ticker as a theme query.
+- **Latest figure** (a share of sales, mix, guidance or target that
+  management restates from call to call): `coverage` for the ticker → read
+  `latest_period` and `latest_call_date` → search the topic with that ticker
+  and no `quarter_filter`, then check that the newest row comes from
+  `latest_period`. If it does not, search the latest call by itself
+  (`quarter_filter=<latest_period>`). If the latest call does not mention
+  the figure, report the newest call that does, and say that the later
+  calls did not repeat it. Give the call date beside the figure.
 
 Quote only `verbatim_quote`; use `canonical_statement` unquoted. A `[…]`
 inside `verbatim_quote` marks omitted transcript sentences between
@@ -337,6 +345,39 @@ with the task; never block on it.
    one-sentence investor angle, plus the tickers it names; chase a company
    story with `get_market_data` or `search_earnings_transcripts`, and a macro
    story with `search_series`/`run_sql`.
+
+   Three kinds of fact go out of date quickly, or are often reported wrongly
+   in other sources. Take each one from the source named here:
+
+   - **Price moves.** For any move in a share price, an index, a commodity
+     or a currency, take the number from `get_market_data` price history.
+     Give the two closing prices and their dates, and compute the change
+     from them ("closed at $50.00 on 3 Mar and $46.00 on 4 Mar, −8.0%").
+     A news article can say why the price moved. It is not the source of the
+     size of the move: an article written before the market closed cannot
+     know the closing price. If a news figure and the price history
+     disagree, use the price history.
+   - **Figures that management updates from call to call** (a business's
+     share of sales, product or channel mix, guidance, targets). Before you
+     call such a figure the latest one, read `coverage` for the company and
+     search its most recent call for the same topic. If the most recent call
+     does not repeat the figure, use the newest call that does, and say that
+     later calls did not update it. Give the call date beside the figure.
+     The steps are under **Latest figure** in the earnings quick reference
+     below.
+   - **Policy that changes often** (tariff rates, sanctions, export
+     controls, subsidy rules, a central bank's policy rate). Before you state
+     the rule that applies now, look for the latest change. For a policy
+     rate, fetch the latest value from the warehouse (`bis`, `frb` and the
+     country schemas). For other policy, use `search_news` with
+     `sort="latest"`: search the name of the legal instrument as well as the
+     topic (a trade-law section number, the name of a sanctions list),
+     because an article about a new rule often does not name every country
+     it covers. When `search_news` has no recent article on the topic, use
+     the host's web search if it has one. Give the date from which the
+     stated rule applies and the instrument that set it. If you cannot
+     confirm that the rule is still in force, say so and give the date of
+     your newest source.
 6. **Satellite signals.** For crop burning, wildfires, air-quality-based
    activity (NO2/SO2/CO), smoke and dust plumes, crop condition (NDVI),
    monsoon rainfall, heatwaves, or agricultural drought — where satellite
@@ -357,6 +398,13 @@ with the task; never block on it.
    a short statement of what the chart shows. Report mode: build and save a
    report object (see `references/output/report-spec.md`) and return the
    findings and the local JSON path.
+
+   When an answer reports a company's debt, give the part due within twelve
+   months and the rest as two figures, with the date of the next large
+   maturity. In US filings the concept "Long term debt" includes the part
+   due within a year. Look in `search_company_filings` for the current
+   portion and for the repayments due in the next twelve months (for
+   example `query="debt"`) before you describe debt as long term.
 
 ## Subagent orchestration
 
