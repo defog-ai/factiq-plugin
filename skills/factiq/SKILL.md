@@ -10,7 +10,7 @@ description: >
   commodities, forex, earnings intelligence, drought and monsoon conditions,
   wildfires, economic charts and maps, and research reports.
   Discover series, query read-only SQL, compute, then return a sourced answer or
-  local output. Use the bundled SQL generators for bilateral trade.
+  local output. Use the bundled SQL generator for national customs trade.
 ---
 
 # FactIQ Data Tools
@@ -58,7 +58,6 @@ Three output modes:
 - The local scripts never touch the API:
 
   ```bash
-  python3 "{plugin_root}/scripts/comext_sql.py" ...   # SQL generator: Eurostat Comext (EU) trade
   python3 "{plugin_root}/scripts/trade_sql.py"  ...   # SQL generator: US/China/India/Korea/Japan/Taiwan customs
   python3 "{plugin_root}/scripts/hs_codes.py"   ...   # HS commodity code <-> name, offline
   python3 "{plugin_root}/scripts/series_math.py" ...  # YoY/YTD/share/index/merge on saved results
@@ -73,11 +72,12 @@ Three output modes:
   absolute path so installations under a directory containing spaces still
   work.
 
-  **For any bilateral-trade question, generate the SQL instead of writing it.**
-  `comext_sql.py` and `trade_sql.py` encode each schema's series-ID grammar,
-  partner-code system, units, and HS-level rules, so the query is correct by
-  construction — run `--help` on either for the subcommands (total / products /
-  trend). Label the HS codes a ranking returns with `hs_codes.py` (zero server
+  **For a bilateral-trade question on a national customs schema, generate the
+  SQL instead of writing it.** `trade_sql.py` encodes each schema's series-ID
+  grammar, partner-code system, units, and HS-level rules, so the query is
+  correct by construction — run `--help` for the subcommands (total / products
+  / trend). For Eurostat Comext (EU) trade, write the SQL with the rules in the
+  Comext section of `references/data/sql-guide.md`. Label the HS codes a ranking returns with `hs_codes.py` (zero server
   calls), and use `series_math.py` for growth or shares when you have saved the
   fetched payload locally.
 

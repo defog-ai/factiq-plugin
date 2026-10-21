@@ -181,7 +181,7 @@ immediately.
   written by the agent, to the FactIQ team when a FactIQ result looks wrong.
   It changes no data. Every other tool only reads data.
 - **Local scripts with no network access.** The skill can run the Python
-  scripts in `scripts/` (`hs_codes.py`, `trade_sql.py`, `comext_sql.py`,
+  scripts in `scripts/` (`hs_codes.py`, `trade_sql.py`,
   `series_math.py`). They read only their arguments, files you pass them, and
   the bundled files in `scripts/data/`, and they print their result. They make
   no network calls.
