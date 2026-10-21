@@ -266,16 +266,16 @@ Use these rules:
   first and last observed dates.
 - Build exact series IDs and join them to `data_points`; an exact
   `series_id` match avoids the pattern scan. The detailed ID shape is
-  `eu_comext_{M|X}_{reporter}_{partner}_{te|ti|tl|tm}_p1_cn8_{product_code}_{eur|kg|su}`.
+  `eu_comext_{M|X}_{reporter}_{partner}_{te|ti|tl|tm|all}_p1_cn8_{product_code}_{eur|kg|su}`.
   `M` means imports and `X` exports. Reporter and partner are lowercase ISO2
   codes, except that `xi` is Eurostat's code for Northern Ireland and `xu`
   its code for the United Kingdom without Northern Ireland. The stored trade
   token follows the partner's status in each month: `te` outside the EU, `ti`
-  inside the EU, `tl` for `xi` and `tm` for `xu` (both from 2021). A range
-  that crosses an EU accession or the United Kingdom's February 2020 exit must
-  query both exact series with non-overlapping date bounds. The `gb` series
-  is the whole United Kingdom in every month. From 2021, `gb` equals `xu`
-  plus `xi`, so never add `xi` or `xu` to `gb`.
+  inside the EU, `tl` for `xi` and `tm` for `xu` (both from 2021). For a
+  range that crosses a partner's EU entry or exit, write `all` in place of
+  the token; see **Series without a trade token (`all`)** below. The `gb`
+  series is the whole United Kingdom in every month. From 2021, `gb` equals
+  `xu` plus `xi`, so never add `xi` or `xu` to `gb`.
 - Use `_eur` for trade value, `_kg` for weight, and `_su` for supplementary
   quantity. Never sum these metrics together. Supplementary units are
   product-specific, so return `series.measurement_units` with an exact CN8
@@ -290,6 +290,60 @@ Use these rules:
   further groups of at most 5 one after another, not at the same time, and
   combine the results locally. Every branch must use the exact-ID join, never a
   `series_id` pattern.
+
+#### Series without a trade token (`all`)
+
+Eurostat stores trade with a partner under `ti` while the partner is in the
+EU and under `te` while it is outside. A partner that joined or left the EU
+therefore has its months in two stored series. The United Kingdom changes
+from `ti` to `te` in February 2020, and Croatia from `te` to `ti` in July
+2013. Write `all` in place of the token to read one series that holds the
+months of every token, with no date split:
+
+```sql
+SELECT extract(year FROM time)::int AS year,
+       count(*) AS months,
+       SUM(value) AS value_eur
+FROM data_points
+WHERE series_id = 'eu_comext_M_de_gb_all_p1_cn6_total_eur'
+  AND time >= DATE '2018-01-01' AND time < DATE '2023-01-01'
+GROUP BY 1
+ORDER BY 1;
+```
+
+Run with `schema="eu_comext_de"`, this tested example returns 12 months for
+each year from 2018 to 2022: the `ti` months up to January 2020 and the `te`
+months after it.
+
+Rules for `all`:
+
+- `all` works in `data_points`, `series` and `dimensions`, in exact IDs, in
+  `IN` lists and in constructed-ID joins
+  (`'eu_comext_M_de_gb_all_p1_cn8_' || lower(p.product_code) || '_eur'`).
+  The exact-ID rule above still applies.
+- In one statement, write every Comext ID with `all` or every ID with its
+  stored token. The server refuses a statement that mixes them, or that
+  names a stored token in other text (`split_part(series_id, '_', 6) = 'te'`
+  or `'%_te_%'`).
+- With `all`, use `series_id` only as it is: select, group, order or count
+  it, compare it with `=`, `<>` or `IN`, or take a part other than the sixth
+  with `split_part(series_id, '_', n)`. The server refuses functions of
+  `series_id` (`lower`, `substring`, `replace`, regular expressions) and a
+  filter on the `trade_type` dimension.
+- An `all` series never adds two tokens. If two tokens hold a value for the
+  same month, the read fails and names the series and the month.
+- A few `_su` products are in one unit under one token and in another unit
+  under the other. For example, France's imports of MDF board (CN8
+  44111210) from the United Kingdom are in square metres under `ti` and in
+  cubic metres under `te`. These parts cannot be added. An `all` ID for
+  such a product fails when the statement names it with `=` or `IN`. A
+  constructed ID leaves it out and returns the other rows, and the result's
+  `left_out_series_note` names each product left out, its two units and the
+  stored IDs that give each unit. Read those stored series separately, one
+  unit each, and say in the answer which products are not in the total.
+- `all` covers `te`, `ti`, `tl` and `tm`. Cyprus also files part of its
+  imports from `xu` in January to March 2021 under a fifth token, `tk`,
+  which `all` does not include. Use `gb` for Cyprus's United Kingdom totals.
 
 To inspect product mappings, qualify the shared table from any country query:
 
