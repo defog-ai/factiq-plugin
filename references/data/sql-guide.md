@@ -266,15 +266,16 @@ Use these rules:
   first and last observed dates.
 - Build exact series IDs and join them to `data_points`; an exact
   `series_id` match avoids the pattern scan. The detailed ID shape is
-  `eu_comext_{M|X}_{reporter}_{partner}_{te|ti|tl}_p1_cn8_{product_code}_{eur|kg|su}`.
+  `eu_comext_{M|X}_{reporter}_{partner}_{te|ti|tl|tm}_p1_cn8_{product_code}_{eur|kg|su}`.
   `M` means imports and `X` exports. Reporter and partner are lowercase ISO2
-  codes, except that `xi` is Eurostat's code for Northern Ireland. The stored
-  trade token follows the partner's status in each month: `te` outside the EU,
-  `ti` inside the EU, and `tl` for Northern Ireland from 2021. A range that
-  crosses an EU accession or Great Britain's February 2020 exit must query both
-  exact series with non-overlapping date bounds. For the United Kingdom from
-  2021, combine the `gb` series with the separately stored `xi` series; `gb`
-  alone excludes Northern Ireland from that point.
+  codes, except that `xi` is Eurostat's code for Northern Ireland and `xu`
+  its code for the United Kingdom without Northern Ireland. The stored trade
+  token follows the partner's status in each month: `te` outside the EU, `ti`
+  inside the EU, `tl` for `xi` and `tm` for `xu` (both from 2021). A range
+  that crosses an EU accession or the United Kingdom's February 2020 exit must
+  query both exact series with non-overlapping date bounds. The `gb` series
+  is the whole United Kingdom in every month. From 2021, `gb` equals `xu`
+  plus `xi`, so never add `xi` or `xu` to `gb`.
 - Use `_eur` for trade value, `_kg` for weight, and `_su` for supplementary
   quantity. Never sum these metrics together. Supplementary units are
   product-specific, so return `series.measurement_units` with an exact CN8
