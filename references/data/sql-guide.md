@@ -287,8 +287,7 @@ Use these rules:
   Comext country schemas in one statement that reads `data_points`, and
   refuses a statement with more. For more reporters (or all 27), send
   further groups of at most 5 one after another, not at the same time, and
-  combine the results locally. `comext_sql.py` splits a longer reporter list
-  into such groups for you. Every branch must use the exact-ID join, never a
+  combine the results locally. Every branch must use the exact-ID join, never a
   `series_id` pattern.
 
 To inspect product mappings, qualify the shared table from any country query:
