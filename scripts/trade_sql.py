@@ -256,8 +256,8 @@ def resolve_partner(source: str, text: str) -> tuple[list[str], str]:
         if not eu_codes:
             fail(
                 f"source '{source}' has no European Union aggregate partner — "
-                "query EU member countries separately, or use comext_sql.py "
-                "for EU-reported trade"
+                "query EU member countries separately, or query the "
+                "eu_comext_* schemas for EU-reported trade"
             )
         return eu_codes, partners[eu_codes[0]]
     # 2. curated alias ("united states", "south korea", "uae", ...).

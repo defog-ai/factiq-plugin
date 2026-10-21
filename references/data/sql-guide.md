@@ -204,14 +204,15 @@ an aggregate that spans a hole as partial ("Q4 2025 average of two months").
 
 ## HS trade datasets
 
-**Don't hand-write bilateral-trade SQL — generate it.** The plugin bundles
-stdlib-only generators that encode every schema's ID grammar, partner codes,
-units, and HS-level rules (run `--help` for subcommands):
-`{plugin_root}/scripts/trade_sql.py` covers the six national customs schemas (census
-`us_census_hs`, `china_customs`, `india_trade`, `korea_trade`, `japan_trade`,
-`taiwan_trade`), `{plugin_root}/scripts/comext_sql.py` covers the 27 Eurostat
-Comext schemas, and `{plugin_root}/scripts/hs_codes.py` resolves HS codes <->
-names offline. Resolve `{plugin_root}` as described in `SKILL.md` before
+**Don't hand-write bilateral-trade SQL for the national customs schemas —
+generate it.** The plugin bundles stdlib-only generators that encode every
+schema's ID grammar, partner codes, units, and HS-level rules (run `--help` for
+subcommands): `{plugin_root}/scripts/trade_sql.py` covers the six national
+customs schemas (census `us_census_hs`, `china_customs`, `india_trade`,
+`korea_trade`, `japan_trade`, `taiwan_trade`), and
+`{plugin_root}/scripts/hs_codes.py` resolves HS codes <-> names offline. For
+the 27 Eurostat Comext schemas, write the SQL with the rules in **Eurostat
+Comext country schemas** below. Resolve `{plugin_root}` as described in `SKILL.md` before
 invoking them; never assume the shell is at the plugin root.
 
 For broad bilateral merchandise-trade questions, use
@@ -265,16 +266,16 @@ Use these rules:
   first and last observed dates.
 - Build exact series IDs and join them to `data_points`; an exact
   `series_id` match avoids the pattern scan. The detailed ID shape is
-  `eu_comext_{M|X}_{reporter}_{partner}_{te|ti|tl}_p1_cn8_{product_code}_{eur|kg|su}`.
+  `eu_comext_{M|X}_{reporter}_{partner}_{te|ti|tl|tm}_p1_cn8_{product_code}_{eur|kg|su}`.
   `M` means imports and `X` exports. Reporter and partner are lowercase ISO2
-  codes, except that `xi` is Eurostat's code for Northern Ireland. The stored
-  trade token follows the partner's status in each month: `te` outside the EU,
-  `ti` inside the EU, and `tl` for Northern Ireland from 2021. A range that
-  crosses an EU accession or Great Britain's February 2020 exit must query both
-  exact series with non-overlapping date bounds. Use `comext_sql.py` so these
-  changes are handled automatically. Its `uk` input combines `gb` with the
-  separately stored `xi` series from 2021; `gb` alone excludes Northern Ireland
-  from that point.
+  codes, except that `xi` is Eurostat's code for Northern Ireland and `xu`
+  its code for the United Kingdom without Northern Ireland. The stored trade
+  token follows the partner's status in each month: `te` outside the EU, `ti`
+  inside the EU, `tl` for `xi` and `tm` for `xu` (both from 2021). A range
+  that crosses an EU accession or the United Kingdom's February 2020 exit must
+  query both exact series with non-overlapping date bounds. The `gb` series
+  is the whole United Kingdom in every month. From 2021, `gb` equals `xu`
+  plus `xi`, so never add `xi` or `xu` to `gb`.
 - Use `_eur` for trade value, `_kg` for weight, and `_su` for supplementary
   quantity. Never sum these metrics together. Supplementary units are
   product-specific, so return `series.measurement_units` with an exact CN8
@@ -287,8 +288,7 @@ Use these rules:
   Comext country schemas in one statement that reads `data_points`, and
   refuses a statement with more. For more reporters (or all 27), send
   further groups of at most 5 one after another, not at the same time, and
-  combine the results locally. `comext_sql.py` splits a longer reporter list
-  into such groups for you. Every branch must use the exact-ID join, never a
+  combine the results locally. Every branch must use the exact-ID join, never a
   `series_id` pattern.
 
 To inspect product mappings, qualify the shared table from any country query:
