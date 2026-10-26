@@ -23,17 +23,18 @@ question, invents synonyms, or reads a video on demand.
 For a non-empty query, retrieval stops at the first tier that returns
 candidates:
 
-1. strict full-text search;
-2. loose any-term full-text search if strict search is empty;
+1. strict full-text search (every query word);
+2. loose full-text search (most of the query words) if strict search is empty;
 3. trigram fallback if both full-text tiers are empty.
 
-Strict results therefore rank ahead of broadened results, but a lower-tier row
-may match only part of a multi-term query. Natural-language questions are
-accepted because common question scaffolding and person terms are normalized,
-not because the server semantically researches them. Begin with concise topical
-language such as `export controls` or `AI infrastructure demand`. When recall
-matters, retry a bounded synonym sweep using the company's own vocabulary, then
-inspect each row for actual support before combining results.
+Every returned row must contain most of the query words, so a long
+natural-language question returns few or no rows. Search with one to three key
+words, such as `export controls` or `inflation outlook`, and move the rest of
+the question into filters: the speaker in `person`, the publisher in
+`institution`, and the kind of document in `appearance_type`. A lower-tier row
+may still match only part of a multi-word query. When recall matters, retry a
+bounded synonym sweep using the speaker's own vocabulary, then inspect each row
+for actual support before combining results.
 
 Default `sort="relevance"` orders lexical score first and publication date
 second. Explicit `sort="newest"` orders publication date first and lexical
@@ -129,7 +130,7 @@ The public shapes differ:
 
 | Parameter | Guidance |
 |---|---|
-| `query` | Concise lexical topic. Empty strings browse according to the target table above |
+| `query` | One to three key words; a row must contain most of them. Empty strings browse according to the target table above |
 | `search_target` | One of the six values in the table above |
 | `company` | Comma-separated tickers and company names, mixed freely (`"NVDA,OpenAI,Federal Reserve"`). A stored ticker matches the appearance's company or a section subject with that ticker; any other value is matched as the name of a company, institution, or organisation a section is about, ignoring punctuation, a leading "The", and corporate suffixes (`"NVIDIA Corp."` finds NVIDIA; `"open ai"` finds OpenAI; `"Alphabet"` also reaches GOOGL rows). The result records `company_tickers`, `company_names`, `company_matched`, and `company_unmatched`; a value that matches nothing returns no rows and up to five possible matches under `company_unmatched`, not an error. The `appearances` and `coverage` targets also match every value, upper-cased, against the entity references of claims (products, rivals, partners such as `"CUDA"` or `"ChatGPT"`); a value found only there still filters those targets and is listed under `company_references`. Alternate spellings can return different `appearances` or `coverage` rows because reference names are matched exactly (`"open ai"` and `"OpenAI"` select the same subject but not the same references); the claims rows are the same |
 | `company_filter` | Old name of `company`, still accepted with the same behaviour; the response note asks for a plugin update. Do not pass both |
