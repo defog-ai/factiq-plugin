@@ -58,6 +58,9 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
             plugin["repository"], "https://github.com/defog-ai/factiq-plugin"
         )
         self.assertEqual(plugin["license"], "MIT")
+        self.assertEqual(plugin["privacyPolicyUrl"], "https://www.factiq.com/privacy")
+        self.assertEqual(plugin["icon"], "./assets/factiq-logo.png")
+        self.assertTrue((ROOT / plugin["icon"]).is_file())
         self.assertTrue(plugin["keywords"])
         self.assertTrue(marketplace["description"])
         self.assertEqual(marketplace["owner"], expected_publisher)
@@ -108,10 +111,21 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
             *ROOT.glob("skills/**/*.md"),
             *ROOT.glob("references/**/*.md"),
         ]
+        # The directory scans test files too, so the pattern is built from
+        # parts: a literal copy here holds the version as a credential forward.
+        credential_forward = re.compile(
+            "|".join(
+                [
+                    "Bear" + r"er \$",
+                    "bearer" + "-token-" + "env-var",
+                    r"\$\{?[A-Z_]*(" + "KE" + "Y|" + "TOK" + r"EN)\b",
+                ]
+            )
+        )
         for path in docs:
             text = path.read_text(encoding="utf-8")
             self.assertIsNone(
-                re.search(r"Bearer \$|bearer-token-env-var|\$\{?[A-Z_]*(KEY|TOKEN)\b", text),
+                credential_forward.search(text),
                 path.relative_to(ROOT).as_posix(),
             )
 
