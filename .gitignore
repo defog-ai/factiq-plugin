@@ -6,4 +6,3 @@ __pycache__/
 config.json
 .env
 *.local.json
-evals/results/
