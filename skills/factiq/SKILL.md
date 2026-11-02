@@ -339,6 +339,15 @@ with the task; never block on it.
    `coverage_note`, the rows skip the periods in `missing_periods`: name them
    in the answer, do not interpolate, and label any aggregate that spans them
    as partial ("Q4 2025 average of two months").
+   **Round once, at the precision you report.** Keep full precision through
+   every step (no `ROUND` in SQL or in `series_math.py` output that you round
+   again later) and round only the final figure you write. Example: an index
+   ratio of 4.249% rounds once to 4.2%; rounding it first to 4.25 and then to
+   4.3% gives a wrong figure. `transform="yoy_pct"` returns 4 decimal places,
+   which is safe to round once more. **When the publisher states a rate**
+   (for example a statistics office's published inflation or unemployment
+   rate), report that published figure. When you compute it yourself, use the
+   published index levels and round once at the publisher's precision.
 5. **Recent market data.** The DB lags for very recent market/price data — use
    `get_market_data` for current quotes, commodities, and FX. For what the
    news is saying about a company, sector, or economy right now, use
