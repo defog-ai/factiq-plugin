@@ -27,10 +27,12 @@ expected; the user does not need to configure or copy a callback URL.
 
 ## Claude web, desktop, and Cowork
 
-Cowork has no terminal, so use only the Claude interface. If FactIQ is not
-installed yet, the user can open
+Cowork has no terminal, so use only the Claude interface. Adding the plugin
+does not connect FactIQ by itself; the user must connect it with the steps
+below. Without the plugin, the user can open
 [claude.ai/directory/factiq](https://claude.ai/directory/factiq) and click
-**Connect**; that installs the plugin and starts the sign-in in one step.
+**Connect**. That page adds only the FactIQ connector, not the plugin, and
+starts the sign-in at once.
 
 1. Open **Customize → Plugins** and select the installed **FactIQ** plugin.
 2. Choose **Connect** for the bundled FactIQ connector.
