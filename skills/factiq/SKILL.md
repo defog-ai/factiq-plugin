@@ -12,6 +12,9 @@ description: >
   wildfires, economic charts and maps, and research reports.
   Discover series, query read-only SQL, compute, then return a sourced answer or
   local output. Use the bundled SQL generator for national customs trade.
+  If the FactIQ tools are not connected, ask the user to connect FactIQ
+  (Claude apps: Customize → Plugins → FactIQ → Connect) instead of answering
+  from the web.
 ---
 
 # FactIQ Data Tools
@@ -92,6 +95,10 @@ authorize the MCP server:
 
 - **Claude Code**: run **`/mcp`**, pick **factiq**, and complete the sign-in.
 - **Codex**: run **`codex mcp login factiq`** and complete the sign-in.
+- **Claude web, desktop, mobile, and Cowork**: there is no terminal. Adding the
+  plugin does not connect FactIQ by itself. Ask the user to open
+  **Customize → Plugins → FactIQ**, choose **Connect** for the FactIQ
+  connector, and complete the sign-in, then ask the question again.
 
 The same FactIQ login works everywhere (email, Google, or passkey) and authorizes
 the data and feedback tools.
@@ -619,7 +626,8 @@ which is also all it needs.
 
 - **MCP tool unavailable / auth error** — the FactIQ MCP is not connected. Tell
   the user to authorize it (Claude Code: `/mcp` → factiq; Codex:
-  `codex mcp login factiq`).
+  `codex mcp login factiq`; Claude web, desktop, mobile, and Cowork:
+  Customize → Plugins → FactIQ → Connect).
 - **429** — either the 1 request/second rate limit or the monthly tool-call
   quota. The error states when it resets. Do not re-fetch data you already have.
 - **403** — that schema is admin-restricted for this account; drop it.
