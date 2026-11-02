@@ -95,7 +95,7 @@ authorize the MCP server:
 
 - **Claude Code**: run **`/mcp`**, pick **factiq**, and complete the sign-in.
 - **Codex**: run **`codex mcp login factiq`** and complete the sign-in.
-- **Claude web, desktop, mobile, and Cowork**: there is no terminal. Adding the
+- **Claude web, desktop, and Cowork**: there is no terminal. Adding the
   plugin does not connect FactIQ by itself. Ask the user to open
   **Customize → Plugins → FactIQ**, choose **Connect** for the FactIQ
   connector, and complete the sign-in, then ask the question again.
@@ -626,7 +626,7 @@ which is also all it needs.
 
 - **MCP tool unavailable / auth error** — the FactIQ MCP is not connected. Tell
   the user to authorize it (Claude Code: `/mcp` → factiq; Codex:
-  `codex mcp login factiq`; Claude web, desktop, mobile, and Cowork:
+  `codex mcp login factiq`; Claude web, desktop, and Cowork:
   Customize → Plugins → FactIQ → Connect).
 - **429** — either the 1 request/second rate limit or the monthly tool-call
   quota. The error states when it resets. Do not re-fetch data you already have.

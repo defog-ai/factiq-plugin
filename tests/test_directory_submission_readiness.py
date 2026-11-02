@@ -226,8 +226,17 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
         frontmatter = skill.split("---", 2)[1]
         self.assertIn("ask the user to connect FactIQ", frontmatter)
         self.assertIn("Customize → Plugins → FactIQ → Connect", frontmatter)
-        self.assertIn("**Claude web, desktop, mobile, and Cowork**", skill)
+        self.assertIn("**Claude web, desktop, and Cowork**", skill)
         self.assertEqual(skill.count("Customize → Plugins → FactIQ"), 3)
+
+    def test_skill_description_fits_the_length_limit(self):
+        # Claude rejects a skill description longer than 1024 characters.
+        skill = (ROOT / "skills" / "factiq" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        frontmatter = skill.split("---", 2)[1]
+        folded = frontmatter.split("description: >", 1)[1]
+        self.assertLessEqual(len(" ".join(folded.split())), 1024)
 
 
 if __name__ == "__main__":
