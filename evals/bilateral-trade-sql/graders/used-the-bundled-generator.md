@@ -1,8 +1,0 @@
----
-type: tool_used
-tool: Bash
-input_match: >-
-  trade_sql\.py(?:\\"|')?\s+(total|products|trend)\b
-min: 1
-weight: 1
----
