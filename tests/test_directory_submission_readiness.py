@@ -188,6 +188,28 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
         ):
             self.assertIn(expected, setup)
 
+    def test_skill_tells_claude_app_users_how_to_connect(self):
+        # Adding the plugin in a Claude app does not connect its MCP server, and
+        # those apps have no /mcp, so the skill must name the in-app path. The
+        # description is the only skill text that is always in context.
+        skill = (ROOT / "skills" / "factiq" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        frontmatter = skill.split("---", 2)[1]
+        self.assertIn("ask the user to connect FactIQ", frontmatter)
+        self.assertIn("Customize → Plugins → FactIQ → Connect", frontmatter)
+        self.assertIn("**Claude web, desktop, and Cowork**", skill)
+        self.assertEqual(skill.count("Customize → Plugins → FactIQ"), 3)
+
+    def test_skill_description_fits_the_length_limit(self):
+        # Claude rejects a skill description longer than 1024 characters.
+        skill = (ROOT / "skills" / "factiq" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        frontmatter = skill.split("---", 2)[1]
+        folded = frontmatter.split("description: >", 1)[1]
+        self.assertLessEqual(len(" ".join(folded.split())), 1024)
+
 
 if __name__ == "__main__":
     unittest.main()
