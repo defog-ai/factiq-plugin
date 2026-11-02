@@ -1,15 +1,13 @@
 # Connect FactIQ
 
-FactIQ uses the bundled `factiq` remote MCP server and FactIQ OAuth. Do not ask
-the user for an API key, access token, or password. The user completes sign-in
-in FactIQ's browser flow.
+FactIQ uses the bundled `factiq` remote MCP server and FactIQ OAuth. The user
+completes sign-in in FactIQ's browser flow. Do not ask the user to paste a
+password or any other secret into the chat.
 
-The one exception is a headless environment (CI, a server, a scripted agent
-run) where no browser can open. There the user creates a personal API key at
-[factiq.com/settings/security](https://www.factiq.com/settings/security) and
-registers the server with it themselves; see
-[Headless environments](#headless-environments) below. Never ask the user to
-paste the key into the chat.
+In a headless environment (CI, a server, a scripted agent run) where no
+browser can open, point the user to
+[factiq.com/docs/api](https://www.factiq.com/docs/api). The user sets up
+headless access there themselves.
 
 ## Claude Code
 
@@ -41,15 +39,6 @@ installed yet, the user can open
 4. Confirm that FactIQ shows as connected. If Claude reports stale or missing
    tools after an update, disconnect and reconnect FactIQ to refresh its tool
    list.
-
-## Headless environments
-
-When no browser is available, the user registers the MCP server with an API
-key instead of signing in. Point them to
-[factiq.com/docs/api](https://www.factiq.com/docs/api), which has the
-commands for Claude Code and Codex. The user creates the key and sets it up
-themselves. Do not read a key from the user's environment or from a file,
-print it, or write it into a commit.
 
 ## Verify the connection
 

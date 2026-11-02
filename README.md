@@ -161,13 +161,9 @@ Then authorize with `/mcp`.
 
 ### Without a browser: scripts, CI, and headless agents
 
-Every FactIQ tool also works with a personal API key instead of the browser
-sign-in. Create the key at [factiq.com/settings/security](https://www.factiq.com/settings/security).
-The guide at [factiq.com/docs/api](https://www.factiq.com/docs/api) shows how
-to call the REST endpoints and the MCP server with the key, and how to register
-the server in Claude Code or Codex without a browser. Keep the key out of
-source control. Regenerating it on the settings page revokes the old one
-immediately.
+Every FactIQ tool also works without the browser sign-in. The guide at
+[factiq.com/docs/api](https://www.factiq.com/docs/api) explains headless
+access for scripts, CI, Claude Code, and Codex.
 
 ## What the plugin sends and runs
 
@@ -370,10 +366,9 @@ chart or report output. Include exact before-and-after examples in the PR.
 
 No secrets belong in this repo, and the plugin holds none — interactive
 access goes through the MCP server's OAuth flow, so the coding agent holds the
-token and nothing is written here. Headless use relies on a personal API key
-that you create on the FactIQ settings page and keep in your own environment;
-it is never stored in this repo. All SQL runs read-only against FactIQ's data
-warehouse.
+token and nothing is written here. Headless access is set up outside this repo,
+as described at [factiq.com/docs/api](https://www.factiq.com/docs/api). All SQL
+runs read-only against FactIQ's data warehouse.
 
 ## License
 

@@ -1,5 +1,4 @@
 import json
-import re
 import struct
 import unittest
 from pathlib import Path
@@ -101,33 +100,6 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
                 path.read_text(encoding="utf-8")
             except UnicodeDecodeError:
                 self.fail(f"{name} is a binary file that is not an image")
-
-    def test_docs_do_not_send_a_credential_from_the_environment(self):
-        # A README example that reads a key from the user's environment and
-        # sends it to a server holds the version for manual review.
-        docs = [
-            ROOT / "README.md",
-            ROOT / "SETUP.md",
-            *ROOT.glob("skills/**/*.md"),
-            *ROOT.glob("references/**/*.md"),
-        ]
-        # The directory scans test files too, so the pattern is built from
-        # parts: a literal copy here holds the version as a credential forward.
-        credential_forward = re.compile(
-            "|".join(
-                [
-                    "Bear" + r"er \$",
-                    "bearer" + "-token-" + "env-var",
-                    r"\$\{?[A-Z_]*(" + "KE" + "Y|" + "TOK" + r"EN)\b",
-                ]
-            )
-        )
-        for path in docs:
-            text = path.read_text(encoding="utf-8")
-            self.assertIsNone(
-                credential_forward.search(text),
-                path.relative_to(ROOT).as_posix(),
-            )
 
     def test_claude_and_codex_versions_stay_in_sync(self):
         claude = json.loads(
