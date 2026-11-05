@@ -441,9 +441,10 @@ no `series` or `data_points` tables; filter the view on its columns with
   `operating_margin`, `net_margin`, `revenue_growth_yoy` (0.25 = 25%).
 - **Latest balance sheet**: `cash`, `total_debt`, `stockholders_equity`,
   `shares_outstanding`.
-- **How fresh the row is**: `price_as_of` (time of the last good price
-  refresh), `price_changed_at`, `fundamentals_period_end` (the date the twelve
-  months end), `ttm_basis` (`four_quarters`, or `latest_annual` when four
+- **How fresh the row is**: `price_as_of` (the time the prices are from,
+  normally 16:00 New York on the date of the last close), `price_changed_at`
+  (when the row was stored, not when the stock traded),
+  `fundamentals_period_end` (the date the twelve months end), `ttm_basis` (`four_quarters`, or `latest_annual` when four
   back-to-back quarters were not filed), `fundamentals_updated_at`.
 
 ```sql
@@ -467,9 +468,10 @@ Rules that change the answer:
   `reporting_currency` is not USD (about 180 filers report in EUR, CAD, CNY and
   others; no currency is converted). `price_to_sales < 2` therefore leaves
   those companies out. Say so when it matters.
-- Prices are delayed about fifteen minutes and refresh only while the US
-  market is open. State `price_as_of` in the answer. Call `get_market_data`
-  when the user needs the current price of one company.
+- Prices are the last US market close, not prices during the session. The
+  close of a day appears some time after the market closes that day. State
+  `price_as_of` in the answer. Call `get_market_data` when the user needs the
+  current price of one company.
 - Always `ORDER BY` and `LIMIT`; count the matches first when the list may be
   long.
 - `screener.daily_history` (`ticker`, `trade_date`, `price`, `market_cap`,

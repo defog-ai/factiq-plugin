@@ -267,7 +267,7 @@ class CompanyScreenerDocumentationTests(unittest.TestCase):
         self.assertIn("select sector, count(*) from screener.companies", rules)
         self.assertIn("a ratio is null when its bottom number is zero or negative", rules)
         self.assertIn("`reporting_currency` is not usd", rules)
-        self.assertIn("delayed about fifteen minutes", rules)
+        self.assertIn("the last us market close, not prices during the session", rules)
         self.assertIn("state `price_as_of` in the answer", rules)
         self.assertIn("`get_market_data`", rules)
 
