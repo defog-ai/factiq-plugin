@@ -5,7 +5,7 @@ and Codex sourced data about companies, markets, and economies. The agent
 searches the data, runs read-only SQL, does the calculation, and returns an
 answer with links to the sources, a chart, or a report.
 
-![A Claude Code session with the FactIQ plugin. The user asks whether Nvidia's filings and US construction data support what its management says about data center demand, and adds "use factiq". Claude searches the earnings call, Jensen Huang's interviews, the company filings, and US construction statistics. It answers with one quotation from the earnings call, one from a podcast interview, the Data Center revenue of $89.0 billion from the 10-Q, and US data center construction at an annual rate of $96.5 billion, with two bar charts.](assets/factiq-claude-code-demo.gif)
+![A Claude Code session with the FactIQ plugin. The user asks whether Nvidia's filings and US construction data support what its management says about data center demand, and adds "use factiq". Claude searches the earnings call, Jensen Huang's interviews, the company filings, and US construction statistics. It answers with one quotation from the earnings call, one from a podcast interview, the Data Center revenue of $89.0 billion from the 10-Q, and US data center construction at an annual rate of $96.5 billion.](assets/factiq-claude-code-demo.gif)
 
 The animation shows one question in Claude Code, the steps that Claude runs,
 and the answer. The answer uses four kinds of data: an earnings call, a
