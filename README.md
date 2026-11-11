@@ -5,6 +5,15 @@ and Codex sourced data about companies, markets, and economies. The agent
 searches the data, runs read-only SQL, does the calculation, and returns an
 answer with links to the sources, a chart, or a report.
 
+![A Claude Code session with the FactIQ plugin. The user types "Does the data back up what Nvidia says about data center demand, use factiq". Claude runs five FactIQ calls: it searches Nvidia's earnings call, Jensen Huang's interviews, Nvidia's company filings, and the US datasets on construction spending, and then runs SQL on the US Census Bureau data. It answers with a table. The CFO's statement on the earnings call that data center revenue increased 18% in the quarter to $89 billion is next to the 10-Q figure: $89.0 billion, up 18.3% on the quarter and 117% on the year. Jensen Huang's statement on the All-In podcast that venture funding for AI is creating demand for data centers is next to the US Census Bureau figure: private data center construction at an annual rate of $96.5 billion in September 2026, up 90% on the year.](assets/factiq-claude-code-demo.gif)
+
+The animation shows one question in Claude Code, the steps that Claude runs,
+and the answer. The answer uses four kinds of data: an earnings call, a
+podcast interview, a company filing, and official statistics. It puts each
+statement by Nvidia next to the figures that check it. It is a rendered
+animation, not a screen capture. The steps, the quotations, and the figures
+come from real FactIQ calls, run in November 2026.
+
 One connection covers data that usually needs many separate subscriptions and
 scrapers:
 
@@ -482,17 +491,21 @@ access for scripts, CI, Claude Code, and Codex.
 
 ## Try it
 
-Once installed and authenticated, ask a question:
+Once installed and authenticated, ask a question in plain English and end it
+with "use factiq":
 
 ```
-/factiq:factiq How has India's trade deficit with China evolved since 2020?
+Does the data back up what Nvidia says about data center demand, use factiq
 ```
 
-The agent finds the relevant series, runs the SQL, and replies with a sourced
-answer, chart JSON, or full report, depending on what you ask for. You
-don't need the slash command: any
-economic or financial data question in any supported client auto-invokes the
-skill.
+The agent searches the earnings calls, the interviews, the company filings,
+and the official statistics, runs the SQL, and replies with a sourced answer,
+chart JSON, or full report, depending on what you ask for. The animation at
+the top of this page shows this question and its answer.
+
+The words "use factiq" are optional: any economic or financial data question
+in any supported client auto-invokes the skill. In Claude Code you can also
+start the question with the `/factiq:factiq` command.
 
 For an earnings question such as "What did Micron management say on its latest
 call?", the skill checks live transcript coverage first, pins the exact fiscal
