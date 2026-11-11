@@ -140,8 +140,8 @@ or a box of latitude and longitude.
 | Vegetation index (NDVI) | Sentinel-2 | Crop condition before the harvest statistics | 2017 onward |
 | Rainfall | CHIRPS and NASA IMERG | Monsoon, drought, and flood risk | 1981 onward |
 | Temperature, soil moisture, wind, humidity | NASA POWER | Heatwaves, electricity demand, sowing conditions | 1981 onward |
-| Nighttime lights | NASA / CNES satellite-derived | Economic activity by country and state in 16 Asian economies | 2019 onward, monthly |
-| Lake and reservoir water levels | NASA / CNES radar altimetry | Hydropower, irrigation, and drought for about 730 water bodies in 98 countries | 1992 onward |
+| Nighttime lights | Satellite-derived | Economic activity by country and state in 16 Asian economies | 2019 onward, monthly |
+| Lake and reservoir water levels | Radar altimetry | Hydropower, irrigation, and drought for about 730 water bodies in 98 countries | 1992 onward |
 
 FactIQ stores every NASA fire detection since 2012, so the agent can compare
 the same weeks in every year, draw a map grid, or list exact fire locations.
