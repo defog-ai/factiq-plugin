@@ -5,11 +5,12 @@ and Codex sourced data about companies, markets, and economies. The agent
 searches the data, runs read-only SQL, does the calculation, and returns an
 answer with links to the sources, a chart, or a report.
 
-![A Claude Code session with the FactIQ plugin. The user asks whether Nvidia's filings and US construction data support what its management says about data center demand, and adds "use factiq". Claude searches the earnings call, Jensen Huang's interviews, the company filings, and US construction statistics. It answers with one quotation from the earnings call, one from a podcast interview, the Data Center revenue of $89.0 billion from the 10-Q, and US data center construction at an annual rate of $96.5 billion.](assets/factiq-claude-code-demo.gif)
+![A Claude Code session with the FactIQ plugin. The user types "Does the data back up what Nvidia says about data center demand, use factiq". Claude runs five FactIQ calls: it searches Nvidia's earnings call, Jensen Huang's interviews, Nvidia's company filings, and the US datasets on construction spending, and then runs SQL on the US Census Bureau data. It answers with a table. The CFO's statement on the earnings call that data center revenue increased 18% in the quarter to $89 billion is next to the 10-Q figure: $89.0 billion, up 18.3% on the quarter and 117% on the year. Jensen Huang's statement on the All-In podcast that venture funding for AI is creating demand for data centers is next to the US Census Bureau figure: private data center construction at an annual rate of $96.5 billion in September 2026, up 90% on the year.](assets/factiq-claude-code-demo.gif)
 
 The animation shows one question in Claude Code, the steps that Claude runs,
 and the answer. The answer uses four kinds of data: an earnings call, a
-podcast interview, a company filing, and official statistics. It is a rendered
+podcast interview, a company filing, and official statistics. It puts each
+statement by Nvidia next to the figures that check it. It is a rendered
 animation, not a screen capture. The steps, the quotations, and the figures
 come from real FactIQ calls, run in November 2026.
 
@@ -494,7 +495,7 @@ Once installed and authenticated, ask a question in plain English and end it
 with "use factiq":
 
 ```
-Do Nvidia's filings and US construction data support what its management says about data center demand, use factiq
+Does the data back up what Nvidia says about data center demand, use factiq
 ```
 
 The agent searches the earnings calls, the interviews, the company filings,
