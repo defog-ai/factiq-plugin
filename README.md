@@ -579,28 +579,6 @@ in [`references/data/schemas.md`](references/data/schemas.md).
 `references/data/schemas.md` has the static overview; the `get_data_catalog` tool
 returns the live, authoritative version.
 
-## FAQ
-
-**What is FactIQ?** FactIQ is a database of economic, financial, and company
-data that an AI agent queries through MCP tools. This repository is the plugin
-that connects Claude, ChatGPT, Claude Code, and Codex to it.
-
-**Is FactIQ an MCP server?** Yes. The server is at
-`https://api.factiq.com/mcp`. The plugin adds a skill that tells the agent how
-to use the tools; the tools also work in any MCP client without the plugin.
-
-**Does FactIQ return full earnings-call or podcast transcripts?** No. It
-returns single statements with the speaker, the date, and a link to the
-source. Earnings-call statements carry the exact quote.
-
-**Where does the data come from?** From the publishers: statistical agencies,
-customs authorities, central banks, securities regulators, NASA and Copernicus
-satellites, and the recordings and documents themselves. Each result names its
-source, and filing figures and statements carry a link to it.
-
-**Can a script or a CI job use FactIQ?** Yes. See
-[factiq.com/docs/api](https://www.factiq.com/docs/api).
-
 ## Repo map
 
 Where the behavior lives — the files contributors will touch:
