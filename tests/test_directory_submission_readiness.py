@@ -198,6 +198,9 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
         frontmatter = skill.split("---", 2)[1]
         self.assertIn("ask the user to connect FactIQ", frontmatter)
         self.assertIn("Customize → Plugins → FactIQ → Connect", frontmatter)
+        # The skill must not stop the host from using its other tools.
+        self.assertNotIn("instead of answering", " ".join(frontmatter.split()))
+        self.assertIn("A web answer is allowed", " ".join(frontmatter.split()))
         self.assertIn("**Claude web, desktop, and Cowork**", skill)
         self.assertEqual(skill.count("Customize → Plugins → FactIQ"), 3)
 
