@@ -60,19 +60,23 @@ Three output modes:
 - All discovery and fetching go through the FactIQ **MCP tools**. Code you
   write locally builds and renders the final files from the fetched results.
 - For Eurostat Comext (EU) trade, write the SQL with the rules in the
-  Comext section of `references/data/sql-guide.md`. HS product names for 2, 4,
-  and 6 digits are in the lookup table `eu_comext_lookup.hs_names` (columns
-  `hs_code`, `hs_level`, `name`, `hs_revision`); read them with `run_sql` and
-  use a LEFT JOIN, because some national 6-digit codes have no HS-2022 name.
-  Join on the first 2, 4, or 6 digits of the code, because Japan stores 9-digit
-  codes only. `eu_comext_lookup.partner_aliases` (columns `source_schema`,
-  `alias`, `partner_code`, `publisher_name`) maps a common partner name in
-  lower case to the source's partner code (`'united states'` for `india_trade`
-  gives the code whose publisher name is `U S A`). A `census` query cannot join
-  either table in one statement (the server refuses it): read the partner code
-  first and use it in the next `run_sql`; run the census ranking first, then
-  read the names in a second `run_sql`.
-  For year-on-year growth use `get_series` with `transform="yoy_pct"` (or
+  Comext section of `references/data/sql-guide.md`.
+- HS product names for 2, 4, and 6 digits are in the lookup table
+  `eu_comext_lookup.hs_names` (columns `hs_code`, `hs_level`, `name`,
+  `hs_revision`); read them with `run_sql` and use a LEFT JOIN, because some
+  national 6-digit codes have no HS-2022 name. Join on the first 2, 4, or 6
+  digits of the code, because Japan stores 9-digit codes only.
+- For the six national customs sources (`china_customs`, `india_trade`,
+  `japan_trade`, `korea_trade`, `taiwan_trade`, `census`), the lookup table
+  `eu_comext_lookup.partner_aliases` (columns `source_schema`, `alias`,
+  `partner_code`, `publisher_name`) maps a common partner name in lower case to
+  the source's partner code. `source_schema` is the schema name used in
+  `run_sql` (`census` for US Census data). Example: `'united states'` for
+  `india_trade` gives the code whose publisher name is `U S A`.
+- A `census` query cannot join either table in one statement (the server
+  refuses it). Use three `run_sql` calls in this order: read the partner code,
+  run the census ranking with it, then read the names of the codes it returned.
+- For year-on-year growth use `get_series` with `transform="yoy_pct"` (or
   `"yoy_diff"` for a rate).
 
 ## Setup

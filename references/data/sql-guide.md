@@ -207,16 +207,22 @@ HS product names for 2, 4, and 6 digits are in the lookup table
 `hs_revision`); read them with `run_sql`. Join on the first 2, 4, or 6 digits
 of the commodity code (`LEFT(dimension_code, 6)`), because Japan stores 9-digit
 codes only. Use a LEFT JOIN, because some national 6-digit codes have no
-HS-2022 name. Partner codes are in the lookup table
-`eu_comext_lookup.partner_aliases` (columns `source_schema`, `alias`,
-`partner_code`, `publisher_name`): it maps a common partner name in lower case
-to the source's partner code (for `india_trade`, `'united states'` gives the
-code whose publisher name is `U S A`). A `census` query cannot join either
-table in one statement (the server refuses it): read the partner code in one
-`run_sql` and use it in the next, and run the census ranking first, then read
-the names in a second `run_sql`. For the 27 Eurostat Comext
-schemas, write the SQL with the rules in **Eurostat Comext country schemas**
-below.
+HS-2022 name.
+
+For the six national customs sources (`china_customs`, `india_trade`,
+`japan_trade`, `korea_trade`, `taiwan_trade`, `census`), partner codes are in
+the lookup table `eu_comext_lookup.partner_aliases` (columns `source_schema`,
+`alias`, `partner_code`, `publisher_name`). It maps a common partner name in
+lower case to the source's partner code. `source_schema` is the schema name
+used in `run_sql` (`census` for US Census data). Example: for `india_trade`,
+`'united states'` gives the code whose publisher name is `U S A`.
+
+A `census` query cannot join either table in one statement (the server refuses
+it). Use three `run_sql` calls in this order: read the partner code, run the
+census ranking with it, then read the names of the codes it returned.
+
+For the 27 Eurostat Comext schemas, write the SQL with the rules in **Eurostat
+Comext country schemas** below.
 
 For broad bilateral merchandise-trade questions, use
 `references/report-patterns/bilateral-trade.md`; it has the report trigger and ready SQL

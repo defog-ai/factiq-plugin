@@ -149,7 +149,7 @@ single `output` node:
     {
       "id": "calc", "type": "series", "inputs": [],
       "title": "YoY change, 2022–2025",
-      "summary": "get_series with transform=\"yoy_diff\": same month one year earlier, matched by date, never a 12-row shift; 48 monthly points per series, inside the 50-point limit",
+      "summary": "get_series with transform=\"yoy_diff\": same month one year earlier, matched by date, never a 12-row shift; 2022–2025 keeps each call inside the 50-point limit",
       "detail": "", "code": "get_series(schema=\"bls\", series_id=\"LNS14000000\", from_year=2022, to_year=2025, transform=\"yoy_diff\")\nget_series(schema=\"bls\", series_id=\"LNS13327709\", from_year=2022, to_year=2025, transform=\"yoy_diff\")", "code_language": "text",
       "series_refs": [
         { "schema_name": "bls", "series_id": "LNS14000000", "title": "Unemployment Rate (U-3)" },
