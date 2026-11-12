@@ -1,14 +1,9 @@
-import json
 import re
-import subprocess
-import sys
-import tempfile
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS = ROOT / "scripts"
 SKILL = (ROOT / "skills/factiq/SKILL.md").read_text(encoding="utf-8")
 SQL_GUIDE = (ROOT / "references/data/sql-guide.md").read_text(encoding="utf-8")
 CHART_SPEC = (ROOT / "references/output/chart-spec.md").read_text(encoding="utf-8")
@@ -49,7 +44,6 @@ class PeriodAlignmentDocumentationTests(unittest.TestCase):
         self.assertIn("generate_series(", good)
         self.assertIn("ON date_trunc('month', d.time) = s.time", good)
         self.assertIn('transform="yoy_pct"', good)
-        self.assertIn("series_math.py yoy", good)
 
     def test_sql_guide_trap_tells_the_model_to_disclose_gaps(self):
         text = normalized(YOY_TRAP)
@@ -118,7 +112,7 @@ class PeriodAlignmentDocumentationTests(unittest.TestCase):
 
     def test_chart_spec_lineage_uses_a_date_matched_calculation(self):
         calc = CHART_SPEC.split('"id": "calc"', 1)[1].split("}", 1)[0]
-        self.assertIn("series_math.py yoy", calc)
+        self.assertIn('transform=\\"yoy_diff\\"', calc)
         self.assertNotIn("12-month difference", calc)
 
 
@@ -137,79 +131,16 @@ class ChartSpecRequiredKeysTests(unittest.TestCase):
         self.assertIn("not as a\n`yAxis` object", optional)
 
 
-def monthly_payload(start_year: int, end_year: int, missing: str) -> dict:
-    rows = []
-    level = 100.0
-    for year in range(start_year, end_year + 1):
-        for month in range(1, 13):
-            time = f"{year}-{month:02d}-01"
-            level = round(level * 1.005, 4)
-            if time != missing:
-                rows.append([time, level])
-    return {"columns": ["time", "value"], "results": rows}
+class HsNamesTableTests(unittest.TestCase):
+    TRADE = SQL_GUIDE.split("## HS trade datasets", 1)[1].split("### Eurostat", 1)[0]
 
-
-def run_yoy(payload: dict, *extra: str) -> subprocess.CompletedProcess:
-    with tempfile.TemporaryDirectory() as tmp:
-        path = Path(tmp) / "series.json"
-        path.write_text(json.dumps(payload), encoding="utf-8")
-        return subprocess.run(
-            [sys.executable, str(SCRIPTS / "series_math.py"), "yoy", "--file", str(path), *extra],
-            cwd=ROOT,
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-
-
-class SeriesMathYoyGapTests(unittest.TestCase):
-    """`yoy` matches on the calendar period, so a hole never shifts the
-    comparison, and the periods with no prior-year value are named on stderr."""
-
-    def parse(self, stdout: str) -> dict[str, str]:
-        lines = stdout.strip().splitlines()
-        self.assertEqual(lines[0].split("\t"), ["time", "value", "yoy_pct"])
-        return {parts[0]: parts[2] for parts in (line.split("\t") for line in lines[1:])}
-
-    def test_month_after_a_hole_still_compares_with_the_same_month_prior_year(self):
-        for missing in ("2025-10-01", "2025-03-01"):
-            with self.subTest(missing=missing):
-                payload = monthly_payload(2024, 2026, missing)
-                result = run_yoy(payload)
-                self.assertEqual(result.returncode, 0, result.stderr)
-                yoy = self.parse(result.stdout)
-                # Every month after the hole must still be +6.17% on the
-                # compounding fixture (1.005**12 - 1), which is only true when
-                # the comparison is date-keyed; a 12-row offset gives 1.005**13.
-                after_hole = [
-                    time for time in yoy if time > missing and time < "2026-01-01"
-                ]
-                self.assertTrue(after_hole)
-                for time in after_hole:
-                    self.assertAlmostEqual(float(yoy[time]), 6.1678, places=3, msg=time)
-                # The month one year after the hole has no prior value.
-                year, rest = missing.split("-", 1)
-                blank = f"{int(year) + 1}-{rest}"
-                self.assertEqual(yoy[blank], "")
-                self.assertNotIn(missing, yoy)
-                self.assertIn("no prior-year observation for " + blank, result.stderr)
-                self.assertIn("say so in the answer", result.stderr)
-
-    def test_complete_series_prints_no_gap_note(self):
-        result = run_yoy(monthly_payload(2024, 2026, missing=""))
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stderr, "")
-        yoy = self.parse(result.stdout)
-        self.assertEqual(yoy["2024-06-01"], "")  # first year: no prior by design
-        self.assertNotEqual(yoy["2025-06-01"], "")
-
-    def test_gap_note_names_the_group_when_grouped(self):
-        payload = monthly_payload(2024, 2025, "2024-05-01")
-        payload["columns"] = ["series_id", "time", "value"]
-        payload["results"] = [["CPI", *row] for row in payload["results"]]
-        result = run_yoy(payload, "--group-col", "series_id")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("CPI: 2025-05-01", result.stderr)
+    def test_docs_name_the_hs_names_table_and_the_left_join(self):
+        for text in (self.TRADE, SKILL):
+            self.assertIn("`eu_comext_lookup.hs_names`", text)
+            self.assertIn("LEFT JOIN", text)
+            self.assertIn("`eu_comext_lookup.partner_aliases`", text)
+            self.assertIn("Japan stores 9-digit", text)
+            self.assertIn("`census` query cannot join", text)
 
 
 class CompanyScreenerDocumentationTests(unittest.TestCase):

@@ -192,9 +192,7 @@ FROM cpi WHERE time >= '2020-01-01' ORDER BY time
 ```
 
 For one series, `get_series` with `transform="yoy_pct"` (or `"yoy_diff"` for a
-rate) does the date-matched calculation on the server. For several series or
-a merged table, `scripts/series_math.py yoy` matches on the calendar period
-too.
+rate) does the date-matched calculation on the server.
 
 The result's `coverage_note` and `missing_periods` name the holes in the rows
 you received, and `run_sql` says so when the statement itself uses a fixed
@@ -204,16 +202,21 @@ an aggregate that spans a hole as partial ("Q4 2025 average of two months").
 
 ## HS trade datasets
 
-**Don't hand-write bilateral-trade SQL for the national customs schemas —
-generate it.** The plugin bundles stdlib-only generators that encode every
-schema's ID grammar, partner codes, units, and HS-level rules (run `--help` for
-subcommands): `{plugin_root}/scripts/trade_sql.py` covers the six national
-customs schemas (census `us_census_hs`, `china_customs`, `india_trade`,
-`korea_trade`, `japan_trade`, `taiwan_trade`), and
-`{plugin_root}/scripts/hs_codes.py` resolves HS codes <-> names offline. For
-the 27 Eurostat Comext schemas, write the SQL with the rules in **Eurostat
-Comext country schemas** below. Resolve `{plugin_root}` as described in `SKILL.md` before
-invoking them; never assume the shell is at the plugin root.
+HS product names for 2, 4, and 6 digits are in the lookup table
+`eu_comext_lookup.hs_names` (columns `hs_code`, `hs_level`, `name`,
+`hs_revision`); read them with `run_sql`. Join on the first 2, 4, or 6 digits
+of the commodity code (`LEFT(dimension_code, 6)`), because Japan stores 9-digit
+codes only. Use a LEFT JOIN, because some national 6-digit codes have no
+HS-2022 name. Partner codes are in the lookup table
+`eu_comext_lookup.partner_aliases` (columns `source_schema`, `alias`,
+`partner_code`, `publisher_name`): it maps a common partner name in lower case
+to the source's partner code (for `india_trade`, `'united states'` gives the
+code whose publisher name is `U S A`). A `census` query cannot join either
+table in one statement (the server refuses it): read the partner code in one
+`run_sql` and use it in the next, and run the census ranking first, then read
+the names in a second `run_sql`. For the 27 Eurostat Comext
+schemas, write the SQL with the rules in **Eurostat Comext country schemas**
+below.
 
 For broad bilateral merchandise-trade questions, use
 `references/report-patterns/bilateral-trade.md`; it has the report trigger and ready SQL

@@ -240,9 +240,9 @@ General Administration of Customs, India's DGCI&S, the Korea Customs Service,
 Japan Customs, Taiwan's International Trade Administration, the UK's HMRC, and
 Eurostat Comext for all 27 EU member states. The same trade flow is therefore
 available from both sides: what China reports as exports to the US and what
-the US reports as imports from China. The plugin bundles a product-code lookup
-and a SQL generator, so the agent can go from a product name to the correct
-codes.
+the US reports as imports from China. HS product names at 2, 4 and 6 digits
+are in a lookup table on the server, so the agent can go from a product name to
+the correct codes.
 
 Questions to try:
 
@@ -251,7 +251,7 @@ Questions to try:
   the US-reported imports from China."
 - "Which EU countries import the most solar panels from China?"
 
-Tools: `run_sql`, with the bundled `hs_codes.py` and `trade_sql.py` scripts.
+Tools: `run_sql`.
 Reference: [`bilateral-trade.md`](references/report-patterns/bilateral-trade.md).
 
 ### Official statistics, and how forecasts changed
@@ -480,11 +480,6 @@ access for scripts, CI, Claude Code, and Codex.
 - **One tool that sends a message.** `send_feedback` sends a short report,
   written by the agent, to the FactIQ team when a FactIQ result looks wrong.
   It changes no data. Every other tool only reads data.
-- **Local scripts with no network access.** The skill can run the Python
-  scripts in `scripts/` (`hs_codes.py`, `trade_sql.py`,
-  `series_math.py`). They read only their arguments, files you pass them, and
-  the bundled files in `scripts/data/`, and they print their result. They make
-  no network calls.
 - **Local outputs only.** Charts and reports are files written in your own
   workspace. The plugin does not publish them anywhere.
 - The plugin has no hooks and runs nothing when it is installed.
