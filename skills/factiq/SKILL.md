@@ -13,8 +13,8 @@ description: >
   Discover series, query read-only SQL, compute, then return a sourced answer or
   local output. Use the bundled SQL generator for national customs trade.
   If the FactIQ tools are not connected, ask the user to connect FactIQ
-  (Claude apps: Customize → Plugins → FactIQ → Connect) instead of answering
-  from the web.
+  (Claude apps: Customize → Plugins → FactIQ → Connect). A web answer is
+  allowed; say that it is not FactIQ data.
 ---
 
 # FactIQ Data Tools
