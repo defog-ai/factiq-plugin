@@ -139,6 +139,7 @@ class HsNamesTableTests(unittest.TestCase):
             self.assertIn("`eu_comext_lookup.hs_names`", text)
             self.assertIn("LEFT JOIN", text)
             self.assertIn("`eu_comext_lookup.partner_aliases`", text)
+            self.assertIn("`series.dataset_code`", text)
             self.assertIn("Japan stores 9-digit", text)
             self.assertIn("`census` query cannot join", text)
 

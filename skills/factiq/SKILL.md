@@ -69,10 +69,13 @@ Three output modes:
 - For the six national customs sources (`china_customs`, `india_trade`,
   `japan_trade`, `korea_trade`, `taiwan_trade`, `census`), the lookup table
   `eu_comext_lookup.partner_aliases` (columns `source_schema`, `alias`,
-  `partner_code`, `publisher_name`) maps a common partner name in lower case to
-  the source's partner code. `source_schema` is the schema name used in
-  `run_sql` (`census` for US Census data). Example: `'united states'` for
-  `india_trade` gives the code whose publisher name is `U S A`.
+  `partner_code`, `publisher_name`, `dataset_code`) maps a common partner name
+  in lower case to the source's partner code. `source_schema` is the schema
+  name used in `run_sql` (`census` for US Census data). Example:
+  `'united states'` for `india_trade` gives the code whose publisher name is
+  `U S A`. When you use a partner code from this table, also filter
+  `series.dataset_code` to the table's `dataset_code`, because another dataset
+  in the same schema can use a different code list.
 - A `census` query cannot join either table in one statement (the server
   refuses it). Use three `run_sql` calls in this order: read the partner code,
   run the census ranking with it, then read the names of the codes it returned.
