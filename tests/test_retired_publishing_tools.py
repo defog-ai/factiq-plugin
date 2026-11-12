@@ -12,7 +12,7 @@ def test_public_plugin_does_not_reference_retired_publishing_tools():
         ROOT / ".claude-plugin/plugin.json",
         ROOT / ".claude-plugin/marketplace.json",
     ]
-    for folder in ("commands", "skills", "references", "scripts"):
+    for folder in ("commands", "skills", "references"):
         paths.extend((ROOT / folder).rglob("*.md"))
         paths.extend((ROOT / folder).rglob("*.py"))
 

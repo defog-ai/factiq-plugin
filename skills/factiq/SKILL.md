@@ -11,7 +11,7 @@ description: >
   commodities, forex, earnings intelligence, drought and monsoon conditions,
   wildfires, economic charts and maps, and research reports.
   Discover series, query read-only SQL, compute, then return a sourced answer or
-  local output. Use the bundled SQL generator for national customs trade.
+  local output.
   If the FactIQ tools are not connected, ask the user to connect FactIQ
   (Claude apps: Customize → Plugins → FactIQ → Connect). A web answer is
   allowed; say that it is not FactIQ data.
@@ -57,33 +57,30 @@ Three output modes:
 
 **Data in, output out:**
 
-- All discovery and fetching go through the FactIQ **MCP tools**. Local scripts
-  build and render the final files from the fetched results.
-- The local scripts never touch the API:
-
-  ```bash
-  python3 "{plugin_root}/scripts/trade_sql.py"  ...   # SQL generator: US/China/India/Korea/Japan/Taiwan customs
-  python3 "{plugin_root}/scripts/hs_codes.py"   ...   # HS commodity code <-> name, offline
-  python3 "{plugin_root}/scripts/series_math.py" ...  # YoY/YTD/share/index/merge on saved results
-  ```
-
-  Resolve `{plugin_root}` once, then reuse it. In Claude Code it is
-  `${CLAUDE_PLUGIN_ROOT}`. In Codex, start from the absolute path supplied for
-  this `SKILL.md`: the plugin root is two directories above the directory
-  containing this file (`skills/factiq/../..`). Never resolve these scripts
-  from the shell's current working directory or from a similarly named
-  `scripts/` directory in the user's project. Keep the quotes around the
-  absolute path so installations under a directory containing spaces still
-  work.
-
-  **For a bilateral-trade question on a national customs schema, generate the
-  SQL instead of writing it.** `trade_sql.py` encodes each schema's series-ID
-  grammar, partner-code system, units, and HS-level rules, so the query is
-  correct by construction — run `--help` for the subcommands (total / products
-  / trend). For Eurostat Comext (EU) trade, write the SQL with the rules in the
-  Comext section of `references/data/sql-guide.md`. Label the HS codes a ranking returns with `hs_codes.py` (zero server
-  calls), and use `series_math.py` for growth or shares when you have saved the
-  fetched payload locally.
+- All discovery and fetching go through the FactIQ **MCP tools**. Code you
+  write locally builds and renders the final files from the fetched results.
+- For Eurostat Comext (EU) trade, write the SQL with the rules in the
+  Comext section of `references/data/sql-guide.md`.
+- HS product names for 2, 4, and 6 digits are in the lookup table
+  `eu_comext_lookup.hs_names` (columns `hs_code`, `hs_level`, `name`,
+  `hs_revision`); read them with `run_sql` and use a LEFT JOIN, because some
+  national 6-digit codes have no HS-2022 name. Join on the first 2, 4, or 6
+  digits of the code, because Japan stores 9-digit codes only.
+- For the six national customs sources (`china_customs`, `india_trade`,
+  `japan_trade`, `korea_trade`, `taiwan_trade`, `census`), the lookup table
+  `eu_comext_lookup.partner_aliases` (columns `source_schema`, `alias`,
+  `partner_code`, `publisher_name`, `dataset_code`) maps a common partner name
+  in lower case to the source's partner code. `source_schema` is the schema
+  name used in `run_sql` (`census` for US Census data). Example:
+  `'united states'` for `india_trade` gives the code whose publisher name is
+  `U S A`. When you use a partner code from this table, also filter
+  `series.dataset_code` to the table's `dataset_code`, because another dataset
+  in the same schema can use a different code list.
+- A `census` query cannot join either table in one statement (the server
+  refuses it). Use three `run_sql` calls in this order: read the partner code,
+  run the census ranking with it, then read the names of the codes it returned.
+- For year-on-year growth use `get_series` with `transform="yoy_pct"` (or
+  `"yoy_diff"` for a rate).
 
 ## Setup
 
@@ -328,17 +325,15 @@ with the task; never block on it.
    results inside the 50-row cap — aggregate in SQL to the granularity a chart
    actually needs. For report tables, pick row granularity to fit the window
    (see the granularity note in `references/output/report-spec.md`).
-4. **Compute deterministically.** For YoY/YTD growth, shares, rebasing, or
-   merging compatible results, save the fetched `columns` and `results` as a
-   local FactIQ payload and use `series_math.py`. Never inspect Claude/Codex
+4. **Compute deterministically.** For year-on-year growth use `get_series`
+   with `transform="yoy_pct"` (or `"yoy_diff"` for a rate). Never inspect Claude/Codex
    transcripts or session directories to recover tool results. For other
    metrics such as per-capita values or custom ratios, write a small local
    Python calculation on the fetched values. There is no server-side code
    interpreter in this loop.
    Year-over-year is the same period one year earlier, **matched by date**,
    never by row position: for one series use `get_series` with
-   `transform="yoy_pct"` (or `"yoy_diff"` for a rate); for several series or a
-   merged table use `series_math.py yoy`; in SQL join on the calendar month
+   `transform="yoy_pct"` (or `"yoy_diff"` for a rate); in SQL join on the calendar month
    (`date_trunc('month', prior.time) = date_trunc('month', cur.time) - interval '1 year'`
    — the stored day of the month varies by source, so never compare exact
    dates), never `LAG(value, 12)` (see the trap in
@@ -347,7 +342,7 @@ with the task; never block on it.
    in the answer, do not interpolate, and label any aggregate that spans them
    as partial ("Q4 2025 average of two months").
    **Round once, at the precision you report.** Keep full precision through
-   every step (no `ROUND` in SQL or in `series_math.py` output that you round
+   every step (no `ROUND` in SQL that you round
    again later) and round only the final figure you write. Example: an index
    ratio of 4.249% rounds once to 4.2%; rounding it first to 4.25 and then to
    4.3% gives a wrong figure. `transform="yoy_pct"` returns 4 decimal places,
@@ -473,8 +468,8 @@ Relevant schemas/datasets (from the parent's catalog step): {hints}
 Constraints: every tool result is capped at 50 rows, so aggregate in SQL to
 the grain the finding needs; compute derived metrics (YoY, ratios, indices)
 yourself from the fetched values. Year-over-year is the same period one year
-earlier matched by date (get_series with transform="yoy_pct", series_math.py
-yoy, or a SQL join on date_trunc('month', time)), never a 12-row offset or an
+earlier matched by date (get_series with transform="yoy_pct", or
+a SQL join on date_trunc('month', time)), never a 12-row offset or an
 exact-date comparison. Report any
 coverage_note / missing_periods from the tool results in your findings.
 

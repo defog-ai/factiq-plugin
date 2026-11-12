@@ -147,13 +147,17 @@ single `output` node:
       ]
     },
     {
-      "id": "calc", "type": "code", "inputs": ["sql1"],
-      "title": "Computed YoY change",
-      "summary": "Same month one year earlier, matched by date, never a 12-row shift",
-      "detail": "", "code": "python3 series_math.py yoy --file rates.json --group-col series_id", "code_language": "bash"
+      "id": "calc", "type": "series", "inputs": [],
+      "title": "YoY change, 2022–2025",
+      "summary": "get_series with transform=\"yoy_diff\": same month one year earlier, matched by date, never a 12-row shift; 2022–2025 keeps each call inside the 50-point limit",
+      "detail": "", "code": "get_series(schema=\"bls\", series_id=\"LNS14000000\", from_year=2022, to_year=2025, transform=\"yoy_diff\")\nget_series(schema=\"bls\", series_id=\"LNS13327709\", from_year=2022, to_year=2025, transform=\"yoy_diff\")", "code_language": "text",
+      "series_refs": [
+        { "schema_name": "bls", "series_id": "LNS14000000", "title": "Unemployment Rate (U-3)" },
+        { "schema_name": "bls", "series_id": "LNS13327709", "title": "Total unemployed plus marginally attached (U-6)" }
+      ]
     },
     {
-      "id": "out", "type": "output", "inputs": ["calc"],
+      "id": "out", "type": "output", "inputs": ["sql1", "calc"],
       "title": "US unemployment rate, 2019–2025",
       "summary": "Line chart of U-3 and U-6 with YoY overlay",
       "detail": ""
