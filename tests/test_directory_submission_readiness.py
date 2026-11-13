@@ -1,10 +1,40 @@
 import json
 import struct
+import subprocess
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+RELEASE_EXCLUDE = ROOT / ".github" / "release-exclude.txt"
+
+
+def release_exclude_paths():
+    lines = RELEASE_EXCLUDE.read_text(encoding="utf-8").splitlines()
+    return [
+        line.strip().rstrip("/")
+        for line in lines
+        if line.strip() and not line.strip().startswith("#")
+    ]
+
+
+def release_files():
+    """Tracked files that the release workflow copies to the release branch."""
+    output = subprocess.run(
+        ["git", "ls-files", "-z"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+    ).stdout.decode("utf-8")
+    excluded = release_exclude_paths()
+    return sorted(
+        name
+        for name in output.split("\0")
+        if name
+        and not any(name == p or name.startswith(p + "/") for p in excluded)
+    )
 
 
 class DirectorySubmissionReadinessTests(unittest.TestCase):
@@ -76,30 +106,56 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
         (entry,) = marketplace["plugins"]
         self.assertEqual(entry["description"], plugin["description"])
 
-    def test_bundled_files_are_text_or_images_and_small(self):
-        # The plugin directory holds a version for manual review when it
-        # bundles a binary that is not an image or font, a file over 256 KiB,
-        # or more than 512 files.
-        allowed_binary = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
-        files = [
-            p
-            for p in ROOT.rglob("*")
-            if p.is_file()
-            and not {".git", "__pycache__", ".pytest_cache", "results"}
-            & set(p.relative_to(ROOT).parts)
-        ]
+    def test_release_files_meet_the_directory_file_policy(self):
+        # The Claude plugin directory reads the `release` branch, which holds
+        # main without the paths in .github/release-exclude.txt. From an
+        # organization that is not Verified, the directory refuses any file
+        # that is not Markdown, text, JSON, YAML or a PNG, JPEG, GIF, WebP or
+        # ICO image, any file that starts with #!, and package manager
+        # configuration. It holds a version for review when a file is over
+        # 256 KiB or the plugin has more than 512 files.
+        allowed_suffixes = {
+            ".md", ".txt", ".json", ".yaml", ".yml",
+            ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico",
+        }
+        allowed_names = {"LICENSE", ".gitignore"}
+        image_suffixes = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico"}
+        package_manager_files = {
+            "package.json", "package-lock.json", "pnpm-workspace.yaml",
+            "pnpm-lock.yaml", "yarn.lock", ".npmrc", ".yarnrc.yml",
+            "pyproject.toml", "requirements.txt", "uv.lock", "Pipfile",
+        }
+
+        files = release_files()
+        self.assertTrue(files)
         self.assertLessEqual(len(files), 512)
-        for path in files:
-            name = path.relative_to(ROOT).as_posix()
+        for name in files:
+            path = ROOT / name
             self.assertFalse(path.is_symlink(), name)
             self.assertNotEqual(path.name, ".DS_Store", name)
-            if path.suffix.lower() in allowed_binary:
+            self.assertNotIn(path.name, package_manager_files, name)
+            suffix = path.suffix.lower()
+            self.assertTrue(
+                suffix in allowed_suffixes or path.name in allowed_names,
+                f"{name} is not a file type the directory accepts",
+            )
+            data = path.read_bytes()
+            self.assertFalse(data.startswith(b"#!"), f"{name} starts with #!")
+            if suffix in image_suffixes:
                 continue
-            self.assertLessEqual(path.stat().st_size, 256 * 1024, name)
+            self.assertLessEqual(len(data), 256 * 1024, name)
+            self.assertNotIn(b"\x00", data, f"{name} holds a NUL byte")
             try:
-                path.read_text(encoding="utf-8")
+                data.decode("utf-8")
             except UnicodeDecodeError:
-                self.fail(f"{name} is a binary file that is not an image")
+                self.fail(f"{name} is not UTF-8 text")
+
+    def test_release_exclude_list_keeps_tests_and_ci_off_the_release_branch(self):
+        excluded = release_exclude_paths()
+        self.assertIn("tests", excluded)
+        self.assertIn(".github", excluded)
+        for name in release_files():
+            self.assertFalse(name.endswith(".py"), name)
 
     def test_claude_and_codex_versions_stay_in_sync(self):
         claude = json.loads(

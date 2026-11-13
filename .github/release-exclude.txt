@@ -1,0 +1,5 @@
+# Paths that stay on main and never reach the release branch.
+# One path per line. The release workflow and
+# tests/test_directory_submission_readiness.py both read this file.
+tests
+.github
