@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   pytest:
     runs-on: ubuntu-latest
@@ -17,3 +20,49 @@ jobs:
         run: python -m pip install pytest
       - name: Run the documentation and script tests
         run: python -m pytest tests/ -q
+
+  # The Claude plugin directory reads the `release` branch. That branch holds
+  # main without the paths in .github/release-exclude.txt, because the
+  # directory refuses Python files from organizations that are not Verified.
+  # This job adds one commit to `release` after the tests pass on main.
+  # It never force-pushes, so every published version stays on the branch.
+  release:
+    needs: pytest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release-branch
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Add a release commit
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Build main's tree without the dev-only paths.
+          grep -vE '^\s*(#|$)' .github/release-exclude.txt \
+            | xargs git rm -r -q --cached --ignore-unmatch --
+          tree=$(git write-tree)
+          git reset -q
+
+          message="Release from ${GITHUB_SHA::7}"
+          if git fetch -q origin release 2>/dev/null; then
+            parent=$(git rev-parse FETCH_HEAD)
+            if [ "$(git rev-parse "$parent^{tree}")" = "$tree" ]; then
+              echo "The release branch already has this content."
+              exit 0
+            fi
+            commit=$(git commit-tree "$tree" -p "$parent" -m "$message")
+          else
+            commit=$(git commit-tree "$tree" -m "$message")
+          fi
+
+          # A plain push. It fails if `release` moved since the fetch.
+          git push origin "$commit:refs/heads/release"
+          echo "Pushed $commit to release ($message)."
