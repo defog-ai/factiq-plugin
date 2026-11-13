@@ -1,0 +1,328 @@
+# Report JSON local output format
+
+A FactIQ report object contains a summary, sections of narrative and charts,
+source details, lineage, and optional methodology notes. Save it as local
+JSON.
+
+A recommended wrapper is:
+
+```
+question: "How has US unemployment evolved since 2022?"
+report:   { summary, sections, methodology_notes? }
+model:    "model name"
+```
+
+`model` is a free-text label for who authored the report — pass your own
+model name.
+
+## Report structure
+
+```json
+{
+  "summary": "2–4 crisp sentences. Each sentence renders as its own summary bullet.",
+  "sections": [
+    {
+      "heading": "Section title",
+      "narrative": "Plain-text paragraph(s) shown beside the section's charts.",
+      "charts": [ { ...chart... } ]
+    }
+  ],
+  "methodology_notes": "Optional caveats: adjustments, survey vintages, definitions."
+}
+```
+
+- `summary` — required, ≤5,000 chars. Rendered as bullets, one per sentence.
+- `sections` — 1–12 (2–5 is the sweet spot). Each needs a `heading`;
+  `narrative` and `charts` are optional per section, but the report as a
+  whole needs **at least one data chart** (text panels don't count toward
+  that minimum) and at most **16 charts total**.
+- `narrative` — **plain text, no markdown**: the FactIQ report format
+  renders narrative verbatim, so `**bold**` shows literal asterisks.
+  ≤30,000 chars.
+
+## Charts
+
+`chart_type`: `line | bar | table | text | quote | bubble | small_multiples |
+stacked_area | map | heatmap`. **Stick to `line`, `bar`, `table`, `text`, and
+`quote`** — the first three take the simple tabular format below; `text` and
+`quote` are the prose and quote panels documented after it. The other types pass through with the
+in-house agent's full hydrated config structure, which is not documented
+here. For a geographic finding, build a separate ChartSpec map using
+`references/output/chart-spec.md` and reference its local path in the narrative.
+
+Tabular chart fields:
+
+| Field | Required | Notes |
+|---|---|---|
+| `chart_type` | yes | `line`, `bar`, or `table` |
+| `title` | yes | The finding, with numbers — same rules as ChartSpec titles |
+| `columns` | yes | Column names, ≤40 |
+| `data` | yes | Rows, ≤1,200: arrays matching `columns` **or** objects keyed by column name |
+| `x_column` | line/bar | One of `columns` (tables default to the first column) |
+| `y_columns` | line/bar | Subset of `columns` (tables default to the rest) |
+| `units` | no | Y-axis label, e.g. `"Percent"` |
+| `subtitle` | no | E.g. `"Seasonally adjusted, monthly"` |
+| `annotations` | no | `[{"date": "<x value>", "text": "..."}]`, used sparingly |
+| `sources` | recommended | See below |
+| `lineage` | recommended | See below |
+| `generation_methodology` | no | One sentence on how the data was assembled |
+
+For time series, `x_column` values should be ISO date strings sorted
+ascending — some endpoints return reverse-chronological rows, which would
+render a backwards x-axis. Use `null` for gaps; don't drop rows. More than
+~300 points per line renders slowly — thin to monthly/quarterly first.
+
+Match table and data-excerpt granularity to the question and window: monthly
+rows suit shorter multi-year windows (roughly up to 3–5 years) where timing,
+seasonality, or turning points matter; over longer windows, summarize with
+annual totals, YTD comparisons, latest/prior snapshots, or selected turning
+points so the table stays readable.
+
+### Text panels
+
+A `text` chart is a **prose panel**: a titled block of one to a few paragraphs
+that occupies a slot in the report flow like a chart. Use it for qualitative
+content — policy context, caveats, interpretation, "what to watch" — that has
+no numbers to plot. **Never build a table whose cells are sentences**; if a
+cell wouldn't fit on one line, it isn't table data — write a text panel.
+
+| Field | Required | Notes |
+|---|---|---|
+| `chart_type` | yes | `text` |
+| `title` | yes | The takeaway, stated like a chart title |
+| `body` | yes | Plain text, ≤4,000 chars; blank lines separate paragraphs |
+| `subtitle` | no | One line of framing |
+| `sources` | recommended | Same format as chart sources |
+
+```json
+{
+  "chart_type": "text",
+  "title": "Policy easing lowers friction, but it does not explain the surge",
+  "subtitle": "What the diplomatic thaw does and does not tell us",
+  "body": "First paragraph of plain text.\n\nSecond paragraph.",
+  "sources": [{ "name": "Ministry of Commerce", "type": "web" }]
+}
+```
+
+Text panels don't satisfy the report's at-least-one-chart requirement, and
+they aren't a second narrative — keep the section `narrative` for reading the
+section's charts, and use a text panel when the prose *is* the panel.
+
+### Quote panels
+
+A `quote` chart is an **attributed-quote panel**: a titled group of 1–8
+related verbatim quotes (the home for `search_earnings_transcripts`
+`verbatim_quote` values). Quoted speech never goes in a text panel body or
+the narrative — it renders here with speaker attribution and a source line.
+Quotes must be verbatim; give the words only (no surrounding quotation
+marks — the page adds typographic quotes).
+
+| Field | Required | Notes |
+|---|---|---|
+| `chart_type` | yes | `quote` |
+| `title` | yes | The takeaway the quotes support, stated like a chart title |
+| `quotes` | yes | 1–8 items, each `{quote, speaker, speaker_role?, affiliation?, context?, source_label?}`; `quote` ≤1,000 chars, `speaker` required |
+| `subtitle` | no | One line of framing, e.g. the call being quoted |
+| `sources` | recommended | Same format as chart sources |
+
+Per-quote fields: `speaker_role` ("CEO", "cfo" — rendered uppercased),
+`affiliation` ("Micron (MU)" or the analyst's firm), `context` (a short
+kicker like "On HBM supply"), `source_label` (the citation line, e.g.
+"Micron (MU) FY2026Q3 earnings call transcript · Q&A" — compose it from the
+company or `reporting_ticker`, `fiscal_period`, and `section`, never the
+ingestion vendor).
+
+```json
+{
+  "chart_type": "quote",
+  "title": "Micron on HBM supply and cash generation",
+  "subtitle": "MU FY2026Q3 earnings call",
+  "quotes": [
+    {
+      "quote": "The last two quarters, we've generated as much as the company's history.",
+      "speaker": "Mark Murphy",
+      "speaker_role": "cfo",
+      "affiliation": "Micron (MU)",
+      "context": "On record cash flow",
+      "source_label": "Micron (MU) FY2026Q3 earnings call transcript · Q&A"
+    }
+  ],
+  "sources": [{ "name": "FactIQ earnings-transcript intelligence", "type": "database" }]
+}
+```
+
+Attribute honestly: check the claim row's `assertion_status` and never
+present an `analyst_hypothesized` quote as management's own words — attribute
+it to the analyst. Like text panels, quote panels don't satisfy the
+at-least-one-chart requirement.
+
+### Sources
+
+```json
+"sources": [
+  {
+    "name": "Bureau of Labor Statistics",
+    "program": "Current Population Survey",
+    "type": "database",
+    "urls": ["/series/bls::LNS14000000"],
+    "titles": ["Unemployment Rate (LNS14000000)"]
+  }
+]
+```
+
+`name` is required; `type` is `database | web | derived` (default
+`database`). For `database` sources, `urls` are site-relative series links
+(`/series/{schema}::{series_id}`) with matching `titles`. Use `derived` for
+metrics you computed (YoY, indexed, ratios) and `web` for web research.
+
+### Lineage
+
+Same DAG format as ChartSpec lineage (see `references/output/chart-spec.md` —
+nodes with `id`, `type`, `title`, `summary`, `detail`, `inputs`, optional
+`code`/`code_language`/`series_refs`, exactly one `output` node referenced
+by `root_id`). Record the SQL and computations you actually ran. A chart
+without `lineage` leaves no record of how its numbers were produced.
+
+Two rules carry over from chart-spec lineage and are worth repeating
+because reports get them wrong most often:
+
+- `code` renders verbatim in a code block — write it as **formatted,
+  multi-line** SQL/Python with real newlines (`\n` in the JSON string),
+  never collapsed onto one line. For `code`-type nodes include the actual
+  script lines you ran, not a one-line paraphrase.
+- `series_refs` lists **every** series the step used (each id in the
+  query's `IN (...)` list or filter, with its real title), not a single
+  representative one. Each ref identifies one series a reader can look up. For
+  very large aggregates (40+ series), list the largest contributors and
+  state the full count in `summary`.
+
+## Validation and limits
+
+Validate the required fields locally before rendering. Recommended limits are
+12 sections, 16 charts, 1,200 rows and 40 columns per chart, 30,000 characters
+per narrative, and 5,000 characters for the summary.
+
+## Worked example
+
+```json
+{
+  "question": "How has US unemployment evolved since 2022?",
+  "model": "<your model id> (factiq-skill)",
+  "report": {
+    "summary": "US unemployment climbed from a 54-year low of 3.4% in April 2023 to 4.2% by late 2024, but the rise reflects labor-force re-entry rather than layoffs. Job openings cooled without a spike in claims.",
+    "sections": [
+      {
+        "heading": "The headline rate bottomed in 2023",
+        "narrative": "The unemployment rate's drift upward from mid-2023 came alongside rising participation, which is why economists read it as normalization rather than deterioration.",
+        "charts": [
+          {
+            "chart_type": "line",
+            "title": "US unemployment rose from 3.4% (Apr 2023) to 4.2% (Nov 2024)",
+            "subtitle": "Seasonally adjusted, monthly",
+            "x_column": "date",
+            "y_columns": ["unemployment_rate"],
+            "columns": ["date", "unemployment_rate"],
+            "units": "Percent",
+            "data": [
+              ["2022-01-01", 4.0],
+              ["2023-04-01", 3.4],
+              ["2024-11-01", 4.2]
+            ],
+            "annotations": [{ "date": "2023-04-01", "text": "54-year low of 3.4%" }],
+            "sources": [
+              {
+                "name": "Bureau of Labor Statistics",
+                "program": "Current Population Survey",
+                "type": "database",
+                "urls": ["/series/bls::LNS14000000"],
+                "titles": ["Unemployment Rate (LNS14000000)"]
+              }
+            ],
+            "generation_methodology": "Headline U-3 rate, seasonally adjusted.",
+            "lineage": {
+              "root_id": "output",
+              "nodes": [
+                {
+                  "id": "sql_1",
+                  "type": "sql",
+                  "title": "Query unemployment series",
+                  "summary": "Pulled the monthly U-3 unemployment rate from the BLS schema.",
+                  "detail": "",
+                  "inputs": [],
+                  "code": "SELECT date, value\nFROM data_points\nWHERE series_id = 'LNS14000000'\nORDER BY date",
+                  "code_language": "sql",
+                  "series_refs": [
+                    { "schema_name": "bls", "series_id": "LNS14000000", "title": "Unemployment Rate" }
+                  ]
+                },
+                {
+                  "id": "output",
+                  "type": "output",
+                  "title": "Plot headline rate",
+                  "summary": "Single line with the April 2023 low annotated.",
+                  "detail": "",
+                  "inputs": ["sql_1"]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "heading": "Sector contributions",
+        "narrative": "Health care and government did the heavy lifting on payrolls through 2024 while tech shed jobs.",
+        "charts": [
+          {
+            "chart_type": "bar",
+            "title": "Health care added 652k jobs in 2024 — triple tech's losses",
+            "x_column": "sector",
+            "y_columns": ["jobs_added_thousands"],
+            "columns": ["sector", "jobs_added_thousands"],
+            "units": "Thousands of jobs",
+            "data": [
+              { "sector": "Health care", "jobs_added_thousands": 652 },
+              { "sector": "Information (tech)", "jobs_added_thousands": -98 }
+            ],
+            "sources": [
+              {
+                "name": "Bureau of Labor Statistics",
+                "program": "Current Employment Statistics (CES)",
+                "type": "database"
+              }
+            ],
+            "generation_methodology": "Year-over-year change in payroll employment by supersector."
+          }
+        ]
+      }
+    ],
+    "methodology_notes": "All figures seasonally adjusted. Sector payrolls from the establishment survey; the headline rate from the household survey — the two can diverge month to month."
+  }
+}
+```
+
+## Workflow
+
+1. Do the full data work first with the MCP tools (`get_data_catalog` →
+   `search_datasets` / `describe_dataset` → `run_sql` / `get_series` → compute
+   locally). Every number in the report must come from data you fetched this
+   session. Results cap at 50 rows — aggregate in SQL to the granularity each
+   chart needs (a report chart wants ≤300 points anyway).
+2. Outline: 2–5 section claims, one or two charts each that prove the claim.
+3. Build the report object from the fetched values — assemble it in context, or
+   write the data arrays with the Write tool / a small local Python script;
+   don't hand-type data rows.
+4. Save the report object or a wrapper such as
+   `{"question": "...", "report": {...}}` to JSON.
+5. Return the JSON path and key findings.
+
+## Specialized report patterns
+
+Broad analytical questions follow the dialectical method in
+`references/report-patterns/README.md` — thesis, antithesis, synthesis — and
+covered domains (bilateral trade, bilateral economic policy, monetary policy,
+fiscal-policy revenue, business formation) must additionally meet the
+required coverage of the playbook that README routes to. Structurally: the
+summary and chart titles carry the synthesis, sections stage the headline
+reading against its strongest fetched contradiction, and the closing section
+or methodology notes name what to watch — the series that would overturn the
+reading.

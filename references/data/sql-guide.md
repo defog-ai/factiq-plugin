@@ -1,0 +1,537 @@
+# FactIQ SQL Guide
+
+SQL runs read-only with one default schema per call — the `run_sql` MCP tool,
+with `schema="bls"` and `sql="..."`. The server sets `search_path` to that
+schema, so reference its tables bare (`series`, not `bls.series`); other
+schemas stay reachable by qualified name (`korea_trade.series`,
+`eu_comext_lookup.product_codes`). Statements are capped at 30 seconds, and
+**every result is capped at 50 rows** — aggregate in SQL to the granularity
+you actually need rather than pulling raw rows (see "Pivoting" and
+"Efficiency" below).
+
+## Table structure (identical in every schema)
+
+- **`series`** — the catalog. Key columns: `series_id`, `series_title`,
+  `human_friendly_title`, `human_friendly_description`, `dataset_code`,
+  `frequency`, `measurement_units`, `adjusted_for_seasonality`, `state`,
+  `county_or_metro_area`, `begin_time`, `end_time`, `data_type`
+  (`timeseries` or `tabular`), `tabular_columns`.
+- **`data_points`** — `series_id`, `time` (date), `value` (numeric).
+- **`dimensions`** — `series_id`, `dimension_type`, `dimension_code`,
+  `dimension_name`. Useful for discovery when titles are uninformative.
+- **`tabular_data`** — JSONB `row_data` per row, for `data_type = 'tabular'`
+  series only.
+- **`compound_series`** — curated derived series with ids like
+  `COMPOUND::...`. Fetch them with the `get_series` tool, not raw SQL.
+
+The `get_data_catalog` tool returns the full DDL.
+
+## Always-true conventions
+
+- **`frequency` values are lowercase**: `'monthly'`, `'quarterly'`,
+  `'annual'`, `'weekly'`, `'semiannual'`. `frequency = 'Monthly'` matches
+  nothing.
+- **`dataset_code` is lowercase** — use ILIKE or lowercase literals.
+- **Match periods on the calendar month, never on the exact date.** The day
+  stored inside `data_points.time` varies by source: most store the first day
+  of the period, but `frb`, `rbi`, `fhfa` and `treasury` store monthly values
+  on the last day of the month (`2025-02-28`, `2025-03-31`), and `frb`, `rbi`,
+  `fhfa` and `cbo` store quarters on quarter-end dates. An exact-date join
+  such as `prior.time = cur.time - interval '1 year'` finds nothing for those
+  (February 29 minus one year is February 28). Join and compare on
+  `date_trunc('month', time)` (or `date_trunc('quarter', time)` for quarterly
+  series):
+  `date_trunc('month', prior.time) = date_trunc('month', cur.time) - interval '1 year'`.
+- The server rewrites `series_title` to
+  `COALESCE(human_friendly_title, series_title)` automatically, normalizes
+  frequency filters, and turns `data_points.series_id` pattern filters into
+  semi-joins on `series`; the response's `transformed_query` shows what
+  actually ran.
+- Results come back enriched with `constituent_series` metadata
+  (titles, units, source) for every series_id touched — use it for chart
+  source attribution.
+
+## Exploratory queries first
+
+Before fetching from a dataset you haven't touched, look at 5 rows of its
+catalog to learn naming conventions and units:
+
+```sql
+SELECT series_id, series_title, dataset_code, frequency,
+       adjusted_for_seasonality, measurement_units
+FROM series WHERE dataset_code ILIKE '<dataset>' LIMIT 5
+```
+
+Run these with `explore=true` so the server treats them as exploration.
+
+## Keep SQL simple and broad
+
+Don't stack ILIKE conditions — you'll miss valid rows and get zero results.
+A broad query returning 50 rows beats a narrow one returning 0 (results are
+capped at 50 rows either way).
+
+```sql
+-- Bad: over-filtered, likely 0 rows
+SELECT series_id, series_title FROM series
+WHERE dataset_code ILIKE 'jt' AND series_title ILIKE '%job openings%total nonfarm%'
+  AND series_title ILIKE '%level%' AND measurement_units ILIKE '%level%'
+
+-- Good: broad, let the results guide you
+SELECT series_id, series_title, measurement_units FROM series
+WHERE dataset_code ILIKE 'jt' AND series_title ILIKE '%job openings%'
+  AND adjusted_for_seasonality = true
+LIMIT 20
+```
+
+Prefer filtering on indexed columns (`series_id`, `dataset_code`) over text
+scans. For text searches use two steps: find series_ids first, then fetch
+their data.
+
+## Pattern-matching `series_id` on `data_points`
+
+`data_points` is enormous and its index does not serve LIKE/ILIKE; an
+unindexed pattern scan of it dies at the 30s timeout. The server covers one
+case for you: a LIKE/ILIKE on `data_points.series_id` in a WHERE clause is
+rewritten into `series_id IN (SELECT series_id FROM series WHERE ...)` (the
+response's `transformed_query` shows it), so it runs through the index. The
+rewrite covers WHERE clauses only — a pattern inside a projection
+(`SUM(CASE WHEN series_id LIKE '%\_5700' THEN value END)`) is untouched, and
+is fine *only if* the WHERE clause already narrows the rows. The same pattern
+against the small `series` catalog is always fast. (Exception: the Eurostat
+Comext country catalogs are not small — millions of series each — and their
+text collation defeats prefix-index use entirely; never pattern-scan
+`series_id` there. See the Comext section below.) When in doubt, resolve ids
+explicitly first:
+
+```sql
+-- Step 1 (fast): resolve the id list on the catalog
+SELECT series_id FROM series WHERE series_id LIKE 'us\_census\_hs\_M\_10d\_280530%'
+
+-- Step 2 (fast): fetch with an explicit IN list — uses the index
+SELECT series_id, time, value FROM data_points
+WHERE series_id IN ('...', '...')
+```
+
+## National vs. sub-national series — the classic trap
+
+Geographically decomposed datasets are dominated by state/region rows; the
+single national aggregate is a needle. For a national question you must
+filter for the national key, not just the metric.
+
+Caveat: server-side dataset descriptions sometimes quote *raw* title
+conventions (pipe-delimited keys like `State: All India` or prefixes like
+`CPI 2024`). Because your filters run against the COALESCEd friendly titles,
+those exact patterns often match nothing. Filter on the natural-language
+fragment instead:
+
+- MOSPI CPI national aggregate → `series_title ILIKE '%All India%'` (add
+  `'%Combined%'` for the combined rural+urban sector), NOT
+  `'%State: All India%'`.
+- MOSPI WPI is national-only — no state key at all. Confirm a dataset is
+  geographically split before forcing a geography filter.
+- To identify a CPI base-year family when titles don't say: read the
+  series description from a `series` fetch, or check the base-year
+  calendar average ≈ 100 in the data itself.
+
+Never chart a single state/region as if it were the national figure. If you
+can't find the national aggregate, say so rather than substituting.
+
+## Year-over-year on monthly data — never use LAG(value, 12)
+
+A row offset equals a period offset only when every period is present. Series
+have holes: a month the source never published, a quarter outside the
+requested window, a period a WHERE clause removed. For the twelve rows after
+a hole, `LAG(value, 12)` compares each month with the month **thirteen**
+periods back (`LEAD(value, 12)` does the same for the twelve rows before it),
+the numbers stay plausible, and nothing errors.
+
+Bad — silently wrong after any gap:
+
+```sql
+SELECT time, 100 * (value / LAG(value, 12) OVER (ORDER BY time) - 1) AS yoy_pct
+FROM data_points
+WHERE series_id = 'CUUR0000SA0' AND time >= '2019-01-01'
+ORDER BY time
+```
+
+Good — join on the calendar month, so a missing prior period gives no row (or
+a null with a LEFT JOIN) instead of a wrong number. Compare
+`date_trunc('month', time)`, not `time` itself: the stored day of the month
+differs between sources (first of the month for most, last day of the period
+for some), and an exact-date join silently finds nothing for those.
+
+```sql
+SELECT cur.time,
+       100 * (cur.value / prior.value - 1) AS yoy_pct
+FROM data_points cur
+JOIN data_points prior
+  ON prior.series_id = cur.series_id
+ AND date_trunc('month', prior.time) = date_trunc('month', cur.time) - interval '1 year'
+WHERE cur.series_id = 'CUUR0000SA0' AND cur.time >= '2020-01-01'
+ORDER BY cur.time
+```
+
+For quarterly series use `date_trunc('quarter', ...)` on both sides; for
+month-over-month subtract `interval '1 month'`.
+
+Also good — build a complete date spine first; on a spine every period has a
+row, so a row offset is a period offset and LAG is correct:
+
+```sql
+WITH spine AS (
+  SELECT generate_series('2019-01-01'::timestamp, '2026-06-01', interval '1 month') AS time
+),
+cpi AS (
+  SELECT s.time, d.value
+  FROM spine s
+  LEFT JOIN data_points d
+    ON date_trunc('month', d.time) = s.time AND d.series_id = 'CUUR0000SA0'
+)
+SELECT time, value, 100 * (value / LAG(value, 12) OVER (ORDER BY time) - 1) AS yoy_pct
+FROM cpi WHERE time >= '2020-01-01' ORDER BY time
+```
+
+For one series, `get_series` with `transform="yoy_pct"` (or `"yoy_diff"` for a
+rate) does the date-matched calculation on the server.
+
+The result's `coverage_note` and `missing_periods` name the holes in the rows
+you received, and `run_sql` says so when the statement itself uses a fixed
+LAG/LEAD offset over time. Act on them: state the missing period(s) in the
+answer, leave the month blank in a chart rather than interpolating, and label
+an aggregate that spans a hole as partial ("Q4 2025 average of two months").
+
+## HS trade datasets
+
+HS product names for 2, 4, and 6 digits are in the lookup table
+`eu_comext_lookup.hs_names` (columns `hs_code`, `hs_level`, `name`,
+`hs_revision`); read them with `run_sql`. Join on the first 2, 4, or 6 digits
+of the commodity code (`LEFT(dimension_code, 6)`), because Japan stores 9-digit
+codes only. Use a LEFT JOIN, because some national 6-digit codes have no
+HS-2022 name.
+
+For the six national customs sources (`china_customs`, `india_trade`,
+`japan_trade`, `korea_trade`, `taiwan_trade`, `census`), partner codes are in
+the lookup table `eu_comext_lookup.partner_aliases` (columns `source_schema`,
+`alias`, `partner_code`, `publisher_name`, `dataset_code`). It maps a common
+partner name in lower case to the source's partner code. `source_schema` is the
+schema name used in `run_sql` (`census` for US Census data). Example: for
+`india_trade`, `'united states'` gives the code whose publisher name is
+`U S A`. When you use a partner code from this table, also filter
+`series.dataset_code` to the table's `dataset_code`, because another dataset in
+the same schema can use a different code list.
+
+A `census` query cannot join either table in one statement (the server refuses
+it). Use three `run_sql` calls in this order: read the partner code, run the
+census ranking with it, then read the names of the codes it returned.
+
+For the 27 Eurostat Comext schemas, write the SQL with the rules in **Eurostat
+Comext country schemas** below.
+
+For broad bilateral merchandise-trade questions, use
+`references/report-patterns/bilateral-trade.md`; it has the report trigger and ready SQL
+templates for monthly totals, latest-month YoY, YTD YoY, annual totals, and top
+HS product drivers.
+
+The core guardrails:
+
+- For trade schemas other than Comext, filter with `dimensions` (`partner`,
+  `flow`, `commodity`, `hs_level`) instead of parsing series IDs. Comext uses
+  the indexed workflow below.
+- Use exactly one HS level in an aggregation. HS-6 is the default for
+  cross-country comparison; national 8/10-digit lines are finer detail and must
+  not be summed with HS-6 rows.
+- Keep value and quantity/weight series separate. For example, Korea KCS has
+  value in `US$ Thousand` and weight in `kg`; a value report should filter
+  `measurement_units = 'US$ Thousand'`.
+- Normalize units before comparing reporters. For example, India DGCI&S values
+  are `US$ Million`, while Korea KCS values are `US$ Thousand`.
+- Query each reporter schema separately by default and compare in local
+  computation — mirror statistics differ on units, timing, valuation,
+  re-exports, and revisions, so state the reporter view explicitly. The
+  one-schema scope is only a default search path, not a wall: qualified
+  cross-schema references do execute, so a `UNION ALL` of per-reporter
+  aggregations in one call is fine when every branch converts to a common
+  unit.
+
+### Eurostat Comext country schemas
+
+Comext uses one physical schema per EU reporter, named
+`eu_comext_<lowercase ISO2>`: for example, `eu_comext_de`, `eu_comext_fr`,
+and `eu_comext_nl`. There is no `eu_comext` data schema. Each country catalog
+is large enough that title searches and dimension-value scans can reach the
+30-second SQL limit.
+
+Exact series IDs are mandatory here, not just faster. Each country catalog
+holds millions of series, and the text collation is not byte-ordered, so
+`series_id LIKE 'prefix%'` cannot run on the index (it scans the table and
+hits the 30-second timeout) and `>=`/`<` string ranges over `series_id`
+return wrong or empty results. Equality joins on constructed IDs avoid those
+scans. Their time still grows with the date range and with the number of
+reporter schemas in one statement, so keep both small.
+
+Use these rules:
+
+- Never search or filter Comext's `dimensions` table by dimension values.
+- Search the shared `eu_comext_lookup.product_codes` table by `product_code`,
+  `product_name`, `hs2_code`, `hs4_code`, or `hs6_code`.
+  It is a complete product-code lookup, including historical codes and their
+  first and last observed dates.
+- Build exact series IDs and join them to `data_points`; an exact
+  `series_id` match avoids the pattern scan. The detailed ID shape is
+  `eu_comext_{M|X}_{reporter}_{partner}_{te|ti|tl|tm|all}_p1_cn8_{product_code}_{eur|kg|su}`.
+  `M` means imports and `X` exports. Reporter and partner are lowercase ISO2
+  codes, except that `xi` is Eurostat's code for Northern Ireland and `xu`
+  its code for the United Kingdom without Northern Ireland. The stored trade
+  token follows the partner's status in each month: `te` outside the EU, `ti`
+  inside the EU, `tl` for `xi` and `tm` for `xu` (both from 2021). For a
+  range that crosses a partner's EU entry or exit, write `all` in place of
+  the token; see **Series without a trade token (`all`)** below. The `gb`
+  series is the whole United Kingdom in every month. From 2021, `gb` equals
+  `xu` plus `xi`, so never add `xi` or `xu` to `gb`.
+- Use `_eur` for trade value, `_kg` for weight, and `_su` for supplementary
+  quantity. Never sum these metrics together. Supplementary units are
+  product-specific, so return `series.measurement_units` with an exact CN8
+  supplementary trend and group by that unit before summing reporters.
+- For all-goods totals, use the exact `cn6_total` series instead of summing
+  every CN8 product.
+- For several reporters, either run one already-aggregated query per reporter
+  schema and combine the small results locally, or `UNION ALL` the
+  per-reporter aggregations in a single call. The API accepts at most 5
+  Comext country schemas in one statement that reads `data_points`, and
+  refuses a statement with more. For more reporters (or all 27), send
+  further groups of at most 5 one after another, not at the same time, and
+  combine the results locally. Every branch must use the exact-ID join, never a
+  `series_id` pattern.
+
+#### Series without a trade token (`all`)
+
+Eurostat stores trade with a partner under `ti` while the partner is in the
+EU and under `te` while it is outside. A partner that joined or left the EU
+therefore has its months in two stored series. The United Kingdom changes
+from `ti` to `te` in February 2020, and Croatia from `te` to `ti` in July
+2013. Write `all` in place of the token to read one series that holds the
+months of every token, with no date split:
+
+```sql
+SELECT extract(year FROM time)::int AS year,
+       count(*) AS months,
+       SUM(value) AS value_eur
+FROM data_points
+WHERE series_id = 'eu_comext_M_de_gb_all_p1_cn6_total_eur'
+  AND time >= DATE '2018-01-01' AND time < DATE '2023-01-01'
+GROUP BY 1
+ORDER BY 1;
+```
+
+Run with `schema="eu_comext_de"`, this tested example returns 12 months for
+each year from 2018 to 2022: the `ti` months up to January 2020 and the `te`
+months after it.
+
+Rules for `all`:
+
+- `all` works in `data_points`, `series` and `dimensions`, in exact IDs, in
+  `IN` lists and in constructed-ID joins
+  (`'eu_comext_M_de_gb_all_p1_cn8_' || lower(p.product_code) || '_eur'`).
+  The exact-ID rule above still applies.
+- In one statement, write every Comext ID with `all` or every ID with its
+  stored token. The server refuses a statement that mixes them, or that
+  names a stored token in other text (`split_part(series_id, '_', 6) = 'te'`
+  or `'%_te_%'`).
+- With `all`, use `series_id` only as it is: select, group, order or count
+  it, compare it with `=`, `<>` or `IN`, or take a part other than the sixth
+  with `split_part(series_id, '_', n)`. The server refuses functions of
+  `series_id` (`lower`, `substring`, `replace`, regular expressions) and a
+  filter on the `trade_type` dimension.
+- An `all` series never adds two tokens. If two tokens hold a value for the
+  same month, the read fails and names the series and the month.
+- A few `_su` products are in one unit under one token and in another unit
+  under the other. For example, France's imports of MDF board (CN8
+  44111210) from the United Kingdom are in square metres under `ti` and in
+  cubic metres under `te`. These parts cannot be added. An `all` ID for
+  such a product fails when the statement names it with `=` or `IN`. A
+  constructed ID leaves it out and returns the other rows, and the result's
+  `left_out_series_note` names each product left out, its two units and the
+  stored IDs that give each unit. Read those stored series separately, one
+  unit each, and say in the answer which products are not in the total.
+- `all` covers `te`, `ti`, `tl` and `tm`. Cyprus also files part of its
+  imports from `xu` in January to March 2021 under a fifth token, `tk`,
+  which `all` does not include. Use `gb` for Cyprus's United Kingdom totals.
+
+To inspect product mappings, qualify the shared table from any country query:
+
+```sql
+SELECT product_code, product_name, hs2_code, hs4_code, hs6_code,
+       first_observed, last_observed
+FROM eu_comext_lookup.product_codes
+WHERE product_name ILIKE '%textile%'
+ORDER BY product_code
+LIMIT 50;
+```
+
+For a broad category, keep the lookup and aggregation in the same SQL call so
+the 50-row tool limit does not truncate the CN8 code list. This tested example
+returns monthly German-reported textile imports from China in 2025. Run it
+with `schema="eu_comext_de"`:
+
+```sql
+SELECT dp.time::date AS month,
+       SUM(dp.value) AS value_eur
+FROM eu_comext_lookup.product_codes p
+JOIN data_points dp
+  ON dp.series_id =
+     'eu_comext_M_de_cn_te_p1_cn8_' || lower(p.product_code) || '_eur'
+WHERE p.hs2_code BETWEEN '50' AND '63'
+  AND p.is_numeric_cn8
+  AND p.first_observed <= DATE '2025-12-01'
+  AND p.last_observed >= DATE '2025-01-01'
+  AND dp.time >= DATE '2025-01-01'
+  AND dp.time < DATE '2026-01-01'
+GROUP BY dp.time
+ORDER BY dp.time;
+```
+
+Replace the reporter, partner, flow, trade token, dates, and HS grouping for
+the question. For one named CN8 product, construct its exact ID directly. For
+all goods, query the total series:
+
+```sql
+SELECT time::date AS month, value AS value_eur
+FROM data_points
+WHERE series_id = 'eu_comext_M_de_cn_te_p1_cn6_total_eur'
+  AND time >= DATE '2025-01-01'
+  AND time < DATE '2026-01-01'
+ORDER BY time;
+```
+
+For several reporters (at most 5) in one call, `UNION ALL` the same exact-ID
+aggregation per country schema. This tested example returns 2025 German- and
+French-reported electronics (HS chapter 85) imports from China; run it with
+`schema="eu_comext_de"` (any Comext schema works as the default):
+
+```sql
+SELECT cc, SUM(v) AS value_eur
+FROM (
+  SELECT 'de' AS cc, dp.value AS v
+  FROM eu_comext_lookup.product_codes p
+  JOIN eu_comext_de.data_points dp
+    ON dp.series_id =
+       'eu_comext_M_de_cn_te_p1_cn8_' || lower(p.product_code) || '_eur'
+  WHERE p.hs2_code = '85'
+    AND dp.time >= DATE '2025-01-01' AND dp.time < DATE '2026-01-01'
+  UNION ALL
+  SELECT 'fr', dp.value
+  FROM eu_comext_lookup.product_codes p
+  JOIN eu_comext_fr.data_points dp
+    ON dp.series_id =
+       'eu_comext_M_fr_cn_te_p1_cn8_' || lower(p.product_code) || '_eur'
+  WHERE p.hs2_code = '85'
+    AND dp.time >= DATE '2025-01-01' AND dp.time < DATE '2026-01-01'
+) t
+GROUP BY cc
+ORDER BY cc;
+```
+
+## Company screener
+
+`screener.companies` is a view with one row per US-listed company that files
+financial statements with the SEC, about 2,400 rows. The `screener` schema has
+no `series` or `data_points` tables; filter the view on its columns with
+`run_sql(schema="screener", ...)`.
+
+- **Identity and labels**: `ticker`, `company_name`, `sector`, `industry`
+  (Nasdaq's labels, not GICS), `sic_code`, `sic_description`,
+  `naics_sector_code`, `country`, `issuer_id`, `cik`.
+- **Price** (US dollars, from Nasdaq's public stock list): `price`,
+  `price_change_pct`, `volume`, `market_cap` (the whole company, all share
+  classes), `enterprise_value` (`market_cap + total_debt - cash`).
+- **Ratios, computed when you query**: `price_to_sales`, `price_to_earnings`,
+  `price_to_book`, `ev_to_sales`, `ev_to_operating_income`.
+- **Latest twelve months, from the company's filings** (in
+  `reporting_currency`): `revenue_ttm`, `gross_profit_ttm`,
+  `operating_income_ttm`, `net_income_ttm`, `operating_cash_flow_ttm`,
+  `capex_ttm`, `free_cash_flow_ttm`, and the fractions `gross_margin`,
+  `operating_margin`, `net_margin`, `revenue_growth_yoy` (0.25 = 25%).
+- **Latest balance sheet**: `cash`, `total_debt`, `stockholders_equity`,
+  `shares_outstanding`.
+- **How fresh the row is**: `price_as_of` (the time the prices are from,
+  normally 16:00 New York on the date of the last close), `price_changed_at`
+  (when the row was stored, not when the stock traded),
+  `fundamentals_period_end` (the date the twelve months end), `ttm_basis` (`four_quarters`, or `latest_annual` when four
+  back-to-back quarters were not filed), `fundamentals_updated_at`.
+
+```sql
+-- Technology companies above $50B with price-to-sales above 10
+SELECT ticker, company_name, market_cap, price_to_sales, revenue_growth_yoy,
+       price_as_of
+FROM screener.companies
+WHERE sector = 'Technology' AND price_to_sales > 10 AND market_cap > 5e10
+ORDER BY market_cap DESC
+LIMIT 25;
+```
+
+Rules that change the answer:
+
+- Look at the labels before you filter on one:
+  `SELECT sector, count(*) FROM screener.companies GROUP BY 1`. A few large
+  companies have no Nasdaq sector (Berkshire Hathaway); `sic_description` is
+  filled for nearly every row.
+- A ratio is NULL when its bottom number is zero or negative, so a loss-making
+  company has no `price_to_earnings`. It is also NULL when
+  `reporting_currency` is not USD (about 180 filers report in EUR, CAD, CNY and
+  others; no currency is converted). `price_to_sales < 2` therefore leaves
+  those companies out. Say so when it matters.
+- Prices are the last US market close, not prices during the session. The
+  close of a day appears some time after the market closes that day. State
+  `price_as_of` in the answer. Call `get_market_data` when the user needs the
+  current price of one company.
+- Always `ORDER BY` and `LIMIT`; count the matches first when the list may be
+  long.
+- `screener.daily_history` (`ticker`, `trade_date`, `price`, `market_cap`,
+  `enterprise_value`, `price_to_sales`, `price_to_earnings`, `price_to_book`,
+  `ev_to_sales`) has one row per company per trading day and starts in
+  September 2026.
+- For the filed values behind a row, call `search_company_filings` with the
+  ticker, or join `filings` tables on `issuer_id`.
+
+## Pivoting to wide format
+
+Chart data wants one row per time period with one column per series. Use
+CASE WHEN with **GROUP BY on time** (omitting GROUP BY fails or duplicates
+rows):
+
+```sql
+SELECT time,
+       MAX(CASE WHEN series_id = 'LNS14000000' THEN value END) AS unemployment_rate,
+       MAX(CASE WHEN series_id = 'LNS11300000' THEN value END) AS participation_rate
+FROM data_points
+WHERE series_id IN ('LNS14000000', 'LNS11300000')
+  AND time >= '2019-01-01'
+GROUP BY time
+ORDER BY time
+```
+
+A period with no row in `data_points` is absent from the pivot, not a null
+cell: the time axis skips it. Read the result's `coverage_note` before
+computing changes across rows.
+
+## Tabular data
+
+Series with `data_type = 'tabular'` store rows in `tabular_data.row_data`
+(JSONB), described by `series.tabular_columns`. The `get_series` tool handles
+them transparently (returns columns + results like a timeseries) — prefer it.
+For direct SQL: `row_data->>'column_name'` extracts text; cast with `::numeric`
+for math.
+
+## Efficiency
+
+- Most questions need 2–4 data calls. Batch independent fetches in one turn.
+- Don't re-fetch via `get_series` what a `run_sql` call already returned — both
+  are equally chartable.
+- Use `get_series` for 1–2 known ids; `run_sql` for 3+ series, joins,
+  aggregations.
+- Results cap at 50 rows. If a fetch comes back `"truncated": true`, aggregate
+  in SQL (`GROUP BY date_trunc(...)`, a SUM/AVG/rank) rather than trying to
+  pull the rest — a chart needs the aggregated result anyway.
+- Zero rows means your filter missed — broaden the term or drop a condition
+  and rerun. You revise faster and cheaper than the server's `auto_retry`
+  LLM reviser.

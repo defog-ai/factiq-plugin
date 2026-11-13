@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.DS_Store
+.claude/
+# Local config files stay out of the repo
+config.json
+.env
+*.local.json
