@@ -168,6 +168,25 @@ rows**, but the remedy is tool-specific:
   `guidance_target`. The latest issue of a target can be in another series
   (one names the basis, the other does not), so read `latest_issued`, not
   the last figure of one series.
+- For a company listed in Japan (`1812.T`), `metric_class="guidance"` or a
+  guidance concept (`concept="revenue guidance"`) returns the company's own
+  forecast from the summary page of its first-quarter and third-quarter
+  earnings releases: revenue, operating income, ordinary income, income
+  before tax, profit attributable to owners of the parent and basic earnings
+  per share of the group, for the fiscal year and, where the company gives
+  one, its first half. Each forecast is two series, the low and the high end
+  (a forecast of one number has the same value on both), with one figure for
+  each release, dated the day of the release. `guidance_target` gives the
+  target: `fiscal_year` is the last day of the fiscal year (`2027-03-31`),
+  `fiscal_period` is `FY` or `H1`, and `bound` is `low` or `high`; the series
+  id holds the same (`1812.T_revenue_guidance_fy2027-03-31_low_annual`).
+  Full-year releases are not stored, so the first forecast of a fiscal year,
+  which the full-year release of the year before prints, is not stored:
+  `first_issued` and `guidance_issue` `"first"` name the first stored figure,
+  not the first forecast of the year, so say that when you show how a
+  forecast changed. Also not stored: the notices that revise a forecast
+  between two releases, dividend forecasts, parent-only forecasts and segment
+  forecasts.
 - For earnings, narrow by ticker, exact fiscal quarter, target, family, and
   (for claims) section. Synthesize multiple bounded calls and disclose when a
   50-row result may be incomplete. Claim and pressure-point results have no
