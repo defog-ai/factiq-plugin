@@ -23,13 +23,9 @@ CODEX_MANIFEST = json.loads(
     (ROOT / ".codex-plugin/plugin.json").read_text(encoding="utf-8")
 )
 
-# SKILL.md holds a short row for the tool; the full contract is the section of
-# the same name in skills/factiq/references/tools.md. The section is wrapped
-# prose, so join it to one line before a phrase check.
-TOOLS = (ROOT / "skills/factiq/references/tools.md").read_text(encoding="utf-8")
-TOOLS_MEDIA = " ".join(
-    TOOLS.split("## `search_media_appearances`", 1)[1].split("\n## ", 1)[0].split()
-)
+SKILL_MEDIA = SKILL.split("| `search_media_appearances`", 1)[1].split(
+    "| `search_news`", 1
+)[0]
 SKILL_MEDIA_REFERENCE = SKILL.split(
     "#### Media target/filter quick reference", 1
 )[1].split("### Publishing", 1)[0]
@@ -56,7 +52,7 @@ class MediaDocumentationContractTests(unittest.TestCase):
             "detail",
             "limit",
         ):
-            self.assertIn(f"`{parameter}", TOOLS_MEDIA)
+            self.assertIn(f"`{parameter}", SKILL_MEDIA)
 
         for target in (
             "search",
@@ -66,12 +62,12 @@ class MediaDocumentationContractTests(unittest.TestCase):
             "appearances",
             "coverage",
         ):
-            self.assertIn(f"`{target}`", TOOLS_MEDIA)
+            self.assertIn(f"`{target}`", SKILL_MEDIA)
         for retired_alias in ("`all`", "`videos`", "`companies`"):
-            self.assertNotIn(retired_alias, TOOLS_MEDIA)
+            self.assertNotIn(retired_alias, SKILL_MEDIA)
 
     def test_retrieval_is_deterministic_strict_loose_then_trigram(self):
-        for text in (TOOLS_MEDIA, PLAYBOOK, SCHEMAS_MEDIA):
+        for text in (SKILL_MEDIA, PLAYBOOK, SCHEMAS_MEDIA):
             normalized = " ".join(text.casefold().split())
             self.assertIn("deterministic", normalized)
             self.assertIn("strict", normalized)
@@ -79,7 +75,7 @@ class MediaDocumentationContractTests(unittest.TestCase):
             self.assertIn("trigram", normalized)
             self.assertIn("no serving-time model", normalized)
 
-        all_media_docs = "\n".join((TOOLS_MEDIA, PLAYBOOK, SCHEMAS_MEDIA, README))
+        all_media_docs = "\n".join((SKILL_MEDIA, PLAYBOOK, SCHEMAS_MEDIA, README))
         for stale_claim in (
             "question-driven, not keyword-driven",
             "search agent on FactIQ's side",
@@ -103,7 +99,7 @@ class MediaDocumentationContractTests(unittest.TestCase):
             "company-level structured corpus",
             "timestamped YouTube URL",
         ):
-            self.assertIn(exact.casefold(), TOOLS_MEDIA.casefold())
+            self.assertIn(exact.casefold(), SKILL_MEDIA.casefold())
 
         for result_term in (
             "result_kind",
@@ -113,7 +109,7 @@ class MediaDocumentationContractTests(unittest.TestCase):
             "attribution",
             "relevance",
         ):
-            self.assertIn(result_term, TOOLS_MEDIA)
+            self.assertIn(result_term, SKILL_MEDIA)
 
         self.assertIn('incompatible with `search_target="passages"`', PLAYBOOK)
         self.assertIn("does not change catalog rows", PLAYBOOK)
