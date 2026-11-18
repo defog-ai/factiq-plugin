@@ -216,6 +216,9 @@ three financial statements:
 - **Risk-factor changes**: the risks that a US company added, changed, or
   removed in its annual report compared with the year before, with the changed
   passage quoted.
+- **Officers and directors**: who is chief executive, chief financial
+  officer, or director of a US company now, and the appointments and
+  departures the company reported in Form 8-K, each with its date and quote.
 - **Revisions**: a figure that a later report restated shows the old value and
   the new value.
 
