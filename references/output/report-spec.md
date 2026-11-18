@@ -76,7 +76,9 @@ Match table and data-excerpt granularity to the question and window: monthly
 rows suit shorter multi-year windows (roughly up to 3–5 years) where timing,
 seasonality, or turning points matter; over longer windows, summarize with
 annual totals, YTD comparisons, latest/prior snapshots, or selected turning
-points so the table stays readable.
+points so the table stays readable. This applies when you choose the rows.
+When the user names the periods and breakdowns ("each quarter since 2020, by
+segment"), print every one of them, with the input figures beside each ratio.
 
 ### Text panels
 
