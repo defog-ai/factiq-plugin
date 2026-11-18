@@ -83,11 +83,28 @@ evidence management did not discuss a topic.
 | `pressure_points` | Ranked lexical search; `query=""` browses Q&A pressure rows | `ticker` or `company_name`, exact `quarter_filter`, `claim_family` (the linked family), `detail`, and `limit`. Every row includes the same transcript locator and source-link fields. `section` is ignored because every row is Q&A. `detail=true` adds `tone_note`. |
 | `disclosure_profile` | No text search: direct company lookup | Uses the first `ticker` value, the first ticker resolved from `company_name`, or `query` as the ticker. It is accumulated at company level. `quarter_filter` is ignored; `claim_family`, `section`, `detail`, and `limit` are also ignored. |
 | `coverage` | No theme search: corpus inventory | `ticker` or `company_name`, and `limit`, apply. `query`, `quarter_filter`, `claim_family`, `section`, and `detail` do not narrow the inventory. |
+| `transcript` | No text search: the stored text of one call, in pages | One company (`ticker` or `company_name`) and the exact `quarter_filter` are required. `section` is `qa` (default: up to 10 exchanges per page, each whole with `qa_turn_id`, `asker`, `asker_role`, `firm`, `question`, and `answers` with `speaker`, `role`, and `text`; a page ends before the exchange that takes it over 40,000 characters), `prepared_remarks`, or `all` (turns in the order spoken, each with `speaker`, `role`, `firm`, and its whole `text`; about 12,000 characters and at most 50 turns per page). `offset` selects the page. `query`, `claim_family`, `detail`, and `limit` are ignored. |
 
-All targets return at most 50 rows. `coverage` counts are inventory metadata,
+`date_to` (`YYYY-MM-DD`) limits `claims`, `pressure_points`, and `coverage` to
+the calls held on or before that date; use it when the question is about a
+past date. A stored call with no call date is then left out, and the note
+gives the count. `transcript` does not return a call held after the date or a
+call with no call date; its error lists the calls held by the date.
+`disclosure_profile` is built from all calls of a company and ignores
+`date_to`.
+
+`claims`, `pressure_points`, `disclosure_profile`, and `coverage` return at
+most 50 rows and have no next page. `coverage` counts are inventory metadata,
 not proof that a quarter-pinned claim browse returned every row in that call.
 Never route around the cap with `run_sql` on `transcripts`; that schema is
-gated, and no raw-transcript or pagination path is promised.
+gated. To read the whole text of one call, use `search_target="transcript"`:
+every page gives `total_exchanges`, `total_turns`, the turns of each section
+under `sections`, `has_more`, and `next_offset`. Call again with
+`offset=next_offset` while `has_more` is true. One page is not the whole call.
+A question that the company's own host reads out can be stored under
+`prepared_remarks`, not `qa`; when `qa` holds few exchanges, read
+`prepared_remarks` or `all`. Attribute the text of a turn to its `speaker`
+and cite the result's `source_label`.
 
 ### How lexical retrieval behaves
 
@@ -119,7 +136,10 @@ sub-word variants. This is lexical, not semantic retrieval:
    `quarter_filter`: an unpinned browse can mix calls. A pinned empty browse
    returns rows in spoken/source order. If 50 rows return, state that the cap
    may omit additional extracted claims; even a shorter result is a claim-graph
-   view, not a raw or guaranteed-complete transcript.
+   view, not a raw or guaranteed-complete transcript. When the note needs the
+   whole question of an analyst and the whole answer, or every exchange of the
+   call, read `search_target="transcript"` for the same ticker and quarter,
+   page by page.
 3. Fetch the same call's Q&A dynamics: `query=""`,
    `search_target="pressure_points"`, with the same ticker and exact quarter,
    `detail=true`, `limit=50`. Disclose the same cap caveat when relevant. The
