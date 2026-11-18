@@ -178,8 +178,11 @@ rows**, but the remedy is tool-specific:
   (a forecast of one number has the same value on both), with one figure for
   each release, dated the day of the release. `guidance_target` gives the
   target: `fiscal_year` is the last day of the fiscal year (`2027-03-31`),
-  `fiscal_period` is `FY` or `H1`, and `bound` is `low` or `high`; the series
-  id holds the same (`1812.T_revenue_guidance_fy2027-03-31_low_annual`).
+  `fiscal_period` is `FY` or `H1`, and `bound` is `low` or `high`. The two
+  series of one forecast have the same name: tell them apart by `bound`. The
+  same is in the axes `forecast_target` (`fy2027-03-31`, `h1fy2027-03-31`)
+  and `forecast_bound` (`low`, `high`) of the series, and in the series id
+  (`1812.T_revenue_guidance_fy2027-03-31_low_annual`).
   Full-year releases are not stored, so the first forecast of a fiscal year,
   which the full-year release of the year before prints, is not stored:
   `first_issued` and `guidance_issue` `"first"` name the first stored figure,
