@@ -155,15 +155,16 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
         # SKILL.md was 58,354 bytes or more with "Files the policy review
         # couldn't cover", and passed every version at 56,905 bytes or less.
         # The directory does not publish the limit. Put long tool contracts
-        # in references/data/tools.md and keep a short row in SKILL.md.
+        # in skills/factiq/references/tools.md and keep a short row in SKILL.md.
         skill = ROOT / "skills" / "factiq" / "SKILL.md"
         self.assertLessEqual(len(skill.read_bytes()), 56_000)
 
     def test_skill_rows_point_to_the_full_tool_contracts(self):
-        skill = (ROOT / "skills" / "factiq" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-        tools = (ROOT / "references" / "data" / "tools.md").read_text(
+        skill_dir = ROOT / "skills" / "factiq"
+        skill = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+        # The file is in the skill folder: an agent resolves a path from the
+        # folder of SKILL.md, not from the plugin root.
+        tools = (skill_dir / "references" / "tools.md").read_text(
             encoding="utf-8"
         )
         for tool in (
@@ -175,15 +176,20 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
                 line for line in skill.splitlines()
                 if line.startswith(f"| `{tool}` (")
             )
-            self.assertIn("`references/data/tools.md`", row, tool)
-            full = next(
-                line for line in tools.splitlines()
-                if line.startswith(f"| `{tool}` (")
+            self.assertIn("`references/tools.md`", row, tool)
+            section = tools.split(f"## `{tool}`", 1)[1].split("\n## ", 1)[0]
+            parameters = " ".join(
+                section.split("Parameters: ", 1)[1].split("\n\n", 1)[0].split()
             )
-            # Both rows list the same parameters.
+            # Both places list the same parameters.
             self.assertEqual(
-                row.split(") | ", 1)[0], full.split(") | ", 1)[0], tool
+                row.split(" (", 1)[1].split(") | ", 1)[0], parameters, tool
             )
+
+    def test_tool_reference_has_no_line_that_a_reader_can_cut(self):
+        tools = ROOT / "skills" / "factiq" / "references" / "tools.md"
+        for line in tools.read_text(encoding="utf-8").splitlines():
+            self.assertLessEqual(len(line), 200, line[:60])
 
     def test_release_exclude_list_keeps_tests_and_ci_off_the_release_branch(self):
         excluded = release_exclude_paths()
