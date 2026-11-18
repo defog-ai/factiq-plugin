@@ -211,6 +211,9 @@ three financial statements:
 - **Operating KPIs** that companies define themselves, such as annual
   recurring revenue, subscribers, and revenue per available room.
 - **Forward guidance** that the company issued formally.
+- **Figures as reported by a past date**: for a US company, each figure as
+  the latest report published by that date stated it, and the first reported
+  value of a figure that a later report changed.
 - **IPO prospectuses** (S-1, F-1, and the final prospectus): the statement
   figures for the years before the first periodic report, and the offering
   price, shares offered, and proceeds.
