@@ -601,8 +601,9 @@ Where the behavior lives — the files contributors will touch:
 - `skills/factiq/SKILL.md` — the skill definition and single source of truth
   for the workflow. Auto-discovered by supported plugin clients from the
   `skills/` directory
-- `references/data/` — the data layer: SQL idioms (`sql-guide.md`) and the
-  dataset schema overview (`schemas.md`)
+- `references/data/` — the data layer: SQL idioms (`sql-guide.md`), the
+  dataset schema overview (`schemas.md`), and the full contracts of the
+  filings, earnings, and media tools (`tools.md`)
 - `references/output/` — local output formats: ChartSpec (`chart-spec.md`) and
   report JSON (`report-spec.md`)
 - `references/report-patterns/` — domain playbooks (monetary policy,

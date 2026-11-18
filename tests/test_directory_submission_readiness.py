@@ -150,6 +150,41 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
             except UnicodeDecodeError:
                 self.fail(f"{name} is not UTF-8 text")
 
+    def test_skill_stays_small_enough_for_the_policy_review(self):
+        # The directory's automated policy review held every version whose
+        # SKILL.md was 58,354 bytes or more with "Files the policy review
+        # couldn't cover", and passed every version at 56,905 bytes or less.
+        # The directory does not publish the limit. Put long tool contracts
+        # in references/data/tools.md and keep a short row in SKILL.md.
+        skill = ROOT / "skills" / "factiq" / "SKILL.md"
+        self.assertLessEqual(len(skill.read_bytes()), 56_000)
+
+    def test_skill_rows_point_to_the_full_tool_contracts(self):
+        skill = (ROOT / "skills" / "factiq" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        tools = (ROOT / "references" / "data" / "tools.md").read_text(
+            encoding="utf-8"
+        )
+        for tool in (
+            "search_company_filings",
+            "search_earnings_transcripts",
+            "search_media_appearances",
+        ):
+            row = next(
+                line for line in skill.splitlines()
+                if line.startswith(f"| `{tool}` (")
+            )
+            self.assertIn("`references/data/tools.md`", row, tool)
+            full = next(
+                line for line in tools.splitlines()
+                if line.startswith(f"| `{tool}` (")
+            )
+            # Both rows list the same parameters.
+            self.assertEqual(
+                row.split(") | ", 1)[0], full.split(") | ", 1)[0], tool
+            )
+
     def test_release_exclude_list_keeps_tests_and_ci_off_the_release_branch(self):
         excluded = release_exclude_paths()
         self.assertIn("tests", excluded)

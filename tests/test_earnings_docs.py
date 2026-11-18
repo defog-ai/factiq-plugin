@@ -8,7 +8,10 @@ PLAYBOOK = (
     ROOT / "references/report-patterns/earnings-intelligence.md"
 ).read_text(encoding="utf-8")
 SCHEMAS = (ROOT / "references/data/schemas.md").read_text(encoding="utf-8")
-SKILL_EARNINGS = SKILL.split("| `search_earnings_transcripts`", 1)[1].split(
+# SKILL.md holds a short row for the tool; the full contract is the row of the
+# same name in references/data/tools.md.
+TOOLS = (ROOT / "references/data/tools.md").read_text(encoding="utf-8")
+SKILL_EARNINGS = TOOLS.split("| `search_earnings_transcripts`", 1)[1].split(
     "| `search_media_appearances`", 1
 )[0]
 PLAYBOOK_RETRIEVAL = PLAYBOOK.split("### How lexical retrieval behaves", 1)[1].split(

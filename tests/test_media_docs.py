@@ -23,9 +23,10 @@ CODEX_MANIFEST = json.loads(
     (ROOT / ".codex-plugin/plugin.json").read_text(encoding="utf-8")
 )
 
-SKILL_MEDIA = SKILL.split("| `search_media_appearances`", 1)[1].split(
-    "| `search_news`", 1
-)[0]
+# SKILL.md holds a short row for the tool; the full contract is the row of the
+# same name in references/data/tools.md. A row is one line.
+TOOLS = (ROOT / "references/data/tools.md").read_text(encoding="utf-8")
+SKILL_MEDIA = TOOLS.split("| `search_media_appearances`", 1)[1].split("\n", 1)[0]
 SKILL_MEDIA_REFERENCE = SKILL.split(
     "#### Media target/filter quick reference", 1
 )[1].split("### Publishing", 1)[0]
