@@ -219,6 +219,9 @@ three financial statements:
 - **Risk-factor changes**: the risks that a US company added, changed, or
   removed in its annual report compared with the year before, with the changed
   passage quoted.
+- **Filing text**: passages of a US company's own filing text (the business
+  section, the risk factors, MD&A, and earnings press releases), found by a
+  word or phrase search.
 - **Officers and directors**: who is chief executive, chief financial
   officer, or director of a US company now, and the appointments and
   departures the company reported in Form 8-K, each with its date and quote.
@@ -316,7 +319,7 @@ OAuth). Every tool except `send_feedback` only reads data.
 | `search_datasets`, `describe_dataset`, `search_series` | Find a dataset or a series by key word |
 | `get_series` | Returns one series, with optional year-over-year and other transforms |
 | `run_sql` | Runs one read-only SQL query for joins, pivots, and totals |
-| `search_company_filings` | Filed figures, segments, guidance, KPIs, commentary, and risk-factor changes for one company |
+| `search_company_filings` | Filed figures, segments, guidance, KPIs, commentary, risk-factor changes, and filing text for one company |
 | `search_earnings_transcripts` | Earnings-call statements and analyst question-and-answer rows |
 | `search_media_appearances` | Statements from podcasts, TV interviews, conference talks, and central-bank documents |
 | `get_geo_data` | Satellite indicators for a country, state, or map box |
