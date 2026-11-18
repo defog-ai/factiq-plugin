@@ -219,6 +219,9 @@ three financial statements:
 - **Risk-factor changes**: the risks that a US company added, changed, or
   removed in its annual report compared with the year before, with the changed
   passage quoted.
+- **Filing text**: passages of a US company's own filing text (the business
+  section, the risk factors, MD&A, and earnings press releases), found by a
+  word or phrase search.
 - **Officers and directors**: who is chief executive, chief financial
   officer, or director of a US company now, and the appointments and
   departures the company reported in Form 8-K, each with its date and quote.
