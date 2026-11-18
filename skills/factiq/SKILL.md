@@ -324,7 +324,11 @@ with the task; never block on it.
    known ids; `run_sql` with a CASE-WHEN pivot for 3+ series or joins. Keep
    results inside the 50-row cap — aggregate in SQL to the granularity a chart
    actually needs. For report tables, pick row granularity to fit the window
-   (see the granularity note in `references/output/report-spec.md`).
+   (see the granularity note in `references/output/report-spec.md`). When the
+   user names the periods and breakdowns of a table ("each quarter since
+   2020, by segment and by country"), fetch every one of them: when one
+   result cannot hold all the rows, make more calls (one company or one
+   range of years in each call).
 4. **Compute deterministically.** For year-on-year growth use `get_series`
    with `transform="yoy_pct"` (or `"yoy_diff"` for a rate). Never inspect Claude/Codex
    transcripts or session directories to recover tool results. For other
@@ -410,6 +414,16 @@ with the task; never block on it.
    a short statement of what the chart shows. Report mode: build and save a
    report object (see `references/output/report-spec.md`) and return the
    findings and the local JSON path.
+
+   **Print a requested table in full.** When the user asks for a table, or
+   for figures over several periods, companies or breakdowns, print every
+   period and every breakdown that was asked for. Print the input figures
+   beside each ratio or other computed value: cost of sales and average
+   inventory beside inventory turnover, net income and total assets beside
+   return on assets. Do not print a sample of the rows, only the ratio, or a
+   chart in place of the table. A chart can go with the table. When FactIQ
+   does not hold one of the periods or breakdowns, keep its row and say that
+   the value is not available.
 
    When an answer reports a company's debt, give the part due within twelve
    months and the rest as two figures, with the date of the next large
