@@ -319,7 +319,7 @@ OAuth). Every tool except `send_feedback` only reads data.
 | `search_datasets`, `describe_dataset`, `search_series` | Find a dataset or a series by key word |
 | `get_series` | Returns one series, with optional year-over-year and other transforms |
 | `run_sql` | Runs one read-only SQL query for joins, pivots, and totals |
-| `search_company_filings` | Filed figures, segments, guidance, KPIs, commentary, and risk-factor changes for one company |
+| `search_company_filings` | Filed figures, segments, guidance, KPIs, commentary, risk-factor changes, and filing text for one company |
 | `search_earnings_transcripts` | Earnings-call statements and analyst question-and-answer rows |
 | `search_media_appearances` | Statements from podcasts, TV interviews, conference talks, and central-bank documents |
 | `get_geo_data` | Satellite indicators for a country, state, or map box |
