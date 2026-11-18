@@ -601,6 +601,9 @@ Where the behavior lives — the files contributors will touch:
 - `skills/factiq/SKILL.md` — the skill definition and single source of truth
   for the workflow. Auto-discovered by supported plugin clients from the
   `skills/` directory
+- `skills/factiq/references/tools.md` — the full contracts of the filings,
+  earnings, and media tools. It is in the skill folder so that the agent finds
+  it from `SKILL.md`
 - `references/data/` — the data layer: SQL idioms (`sql-guide.md`) and the
   dataset schema overview (`schemas.md`)
 - `references/output/` — local output formats: ChartSpec (`chart-spec.md`) and
