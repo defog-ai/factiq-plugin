@@ -226,7 +226,11 @@ the data contradicts or cannot yet test the claim.
    `quarter_filter`, target, family/section filters, synonym sweep, detail, and
    limit. Fetch pressure points separately with the same ticker and quarter.
 3. Compare normalized `canonical_statement` content in prose, but quote only
-   each row's `verbatim_quote`. Keep period and speaker attached to every row.
+   each row's `verbatim_quote` or the stored text of a transcript page
+   (`question`, the `text` of an answer, the `text` of a turn), never
+   `canonical_statement`. Keep period and speaker attached to every row and
+   every quote. A transcript page returns no source URL: name the call with
+   its ticker and fiscal period and do not invent a link.
 4. Distinguish a changed claim from a retrieval gap: "no matching extracted
    row in FY2026Q2" is not "management stopped discussing it." Disclose the
    coverage window and any 50-row cap hit for every quarter.
