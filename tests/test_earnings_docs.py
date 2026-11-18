@@ -8,9 +8,13 @@ PLAYBOOK = (
     ROOT / "references/report-patterns/earnings-intelligence.md"
 ).read_text(encoding="utf-8")
 SCHEMAS = (ROOT / "references/data/schemas.md").read_text(encoding="utf-8")
-SKILL_EARNINGS = SKILL.split("| `search_earnings_transcripts`", 1)[1].split(
-    "| `search_media_appearances`", 1
-)[0]
+# SKILL.md holds a short row for the tool; the full contract is the section of
+# the same name in skills/factiq/references/tools.md. The section is wrapped
+# prose, so join it to one line before a phrase check.
+TOOLS = (ROOT / "skills/factiq/references/tools.md").read_text(encoding="utf-8")
+TOOLS_EARNINGS = " ".join(
+    TOOLS.split("## `search_earnings_transcripts`", 1)[1].split("\n## ", 1)[0].split()
+)
 PLAYBOOK_RETRIEVAL = PLAYBOOK.split("### How lexical retrieval behaves", 1)[1].split(
     "## The Six Workflows", 1
 )[0]
@@ -23,7 +27,7 @@ class EarningsDocumentationContractTests(unittest.TestCase):
     """Protect load-bearing earnings instructions from semantic drift."""
 
     def test_retrieval_describes_strict_loose_and_trigram_tiers(self):
-        for text in (SKILL_EARNINGS, PLAYBOOK_RETRIEVAL, SCHEMAS_EARNINGS):
+        for text in (TOOLS_EARNINGS, PLAYBOOK_RETRIEVAL, SCHEMAS_EARNINGS):
             normalized = " ".join(text.lower().split())
             self.assertIn("strict", normalized)
             self.assertIn("loose", normalized)
@@ -34,7 +38,7 @@ class EarningsDocumentationContractTests(unittest.TestCase):
             "full claim spine",
             "mostly the **latest call only**",
         ):
-            self.assertNotIn(stale_claim, SKILL_EARNINGS.lower())
+            self.assertNotIn(stale_claim, TOOLS_EARNINGS.lower())
             self.assertNotIn(stale_claim, PLAYBOOK.lower())
 
     def test_single_call_workflow_is_coverage_first_and_quarter_pinned(self):
@@ -74,7 +78,7 @@ class EarningsDocumentationContractTests(unittest.TestCase):
             self.assertIn(field, PLAYBOOK)
 
     def test_source_labels_name_the_earnings_call_not_the_ingestion_vendor(self):
-        for text in (SKILL_EARNINGS, PLAYBOOK, SCHEMAS_EARNINGS):
+        for text in (TOOLS_EARNINGS, PLAYBOOK, SCHEMAS_EARNINGS):
             normalized = " ".join(text.lower().split())
             self.assertIn("source_link.source_label", normalized)
             self.assertIn("earnings call transcript", normalized)
@@ -97,7 +101,7 @@ class EarningsDocumentationContractTests(unittest.TestCase):
         self.assertIn("calendar_date", cross_company)
 
     def test_indian_companies_use_the_nse_suffix(self):
-        for text in (SKILL_EARNINGS, PLAYBOOK):
+        for text in (TOOLS_EARNINGS, PLAYBOOK):
             normalized = " ".join(text.split())
             self.assertIn("TCS.NS", normalized)
             self.assertIn("read_as_exchange_symbol", normalized)
@@ -105,7 +109,7 @@ class EarningsDocumentationContractTests(unittest.TestCase):
             self.assertIn("INFY.NS", normalized)
 
     def test_swiss_companies_use_the_six_suffix(self):
-        for text in (SKILL_EARNINGS, PLAYBOOK):
+        for text in (TOOLS_EARNINGS, PLAYBOOK):
             normalized = " ".join(text.split())
             self.assertIn("NESN.SW", normalized)
             # ROP is Roper Technologies; Roche needs the suffix.
