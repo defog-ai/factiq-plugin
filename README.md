@@ -105,17 +105,20 @@ and [`monetary-policy.md`](references/report-patterns/monetary-policy.md).
 
 ### Earnings calls: what management said and what analysts pressed on
 
-FactIQ does not return a raw transcript. It splits each earnings call into
-single statements. Each statement has the speaker, the speaker's role, the
-exact quote, the fiscal quarter, a topic, and, where the statement has a
-number, the value and unit. This lets the agent search one topic across many
-companies and many quarters.
+FactIQ splits each earnings call into single statements. Each statement has
+the speaker, the speaker's role, the exact quote, the fiscal quarter, a topic,
+and, where the statement has a number, the value and unit. This lets the agent
+search one topic across many companies and many quarters.
 
 A second kind of row records the question-and-answer part of the call: what
 the analyst asked for, which firm asked, and whether management confirmed,
 partly answered, deflected, or declined. When management refused to give a
 number, the row names that number. A company profile lists what the company
 usually discloses and what it usually holds back.
+
+The agent can also read the stored text of one call, a page at a time: each
+question of the Q&A session with the analyst, the firm and every answer, or
+the prepared remarks in the order spoken.
 
 Coverage includes US-listed companies and companies listed in India and
 Switzerland. The agent checks the live coverage list before it answers.
@@ -509,7 +512,8 @@ For an earnings question such as "What did Micron management say on its latest
 call?", the skill checks live transcript coverage first, pins the exact fiscal
 quarter, and then retrieves bounded management-claim and Q&A-pressure rows for
 that same call. It keeps spoken remarks separate from formal guidance and SEC
-filed actuals; the tool does not return a raw transcript.
+filed actuals. When the question needs a full exchange, it reads the stored
+text of that call a page at a time.
 
 For a media question such as "How has Jensen Huang discussed export controls
 outside earnings calls?", the skill checks company-level structured coverage,
