@@ -210,7 +210,10 @@ three financial statements:
 - **Segment detail**: revenue and profit by business, product, and region.
 - **Operating KPIs** that companies define themselves, such as annual
   recurring revenue, subscribers, and revenue per available room.
-- **Forward guidance** that the company issued formally.
+- **Forward guidance** that the company issued formally. For a company listed
+  in Japan, this is the company's own forecast for the fiscal year and its
+  first half, as its first-quarter and third-quarter earnings releases print
+  it.
 - **Figures as reported by a past date**: for a US company, each figure as
   the latest report published by that date stated it, and the first reported
   value of a figure that a later report changed.
