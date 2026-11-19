@@ -226,7 +226,7 @@ class DirectorySubmissionReadinessTests(unittest.TestCase):
         )
         self.assertNotIn("allowed-tools:", skill)
         self.assertIn(
-            "`get_market_data` (`asset`, `data_type?`, `frequency?`, `limit?`)",
+            "`get_market_data` (`asset`, `data_type?`, `frequency?`, `limit?`, `offset?`)",
             skill,
         )
         for legacy_parameter in ("`function`", "`outputsize?`"):
