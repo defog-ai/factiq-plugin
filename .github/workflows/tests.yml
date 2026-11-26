@@ -26,9 +26,16 @@ jobs:
   # directory refuses Python files from organizations that are not Verified.
   # This job adds one commit to `release` after the tests pass on main.
   # It never force-pushes, so every published version stays on the branch.
+  #
+  # To pause releases, set the repository variable RELEASE_PAUSED to `true`
+  # (Settings, Secrets and variables, Actions, Variables). Each new commit on
+  # `release` is a new version in the directory and needs its own review, so
+  # pause while a reviewer has a version. To resume, set the variable to
+  # `false` or delete it. The next push to main then releases all held changes
+  # as one version.
   release:
     needs: pytest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.RELEASE_PAUSED != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
