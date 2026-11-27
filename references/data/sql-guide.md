@@ -48,8 +48,11 @@ The `get_data_catalog` tool returns the full DDL.
   semi-joins on `series`; the response's `transformed_query` shows what
   actually ran.
 - Results come back enriched with `constituent_series` metadata
-  (titles, units, source) for every series_id touched — use it for chart
-  source attribution.
+  (titles, units, source) for the series in a `series_id` column of the
+  result, or for the ids that the `WHERE` names with `=` or `IN ('...')` —
+  use it for chart source attribution. A statement that gives neither (for
+  example a `SELECT DISTINCT` with a `LIKE` filter on `series_id`) returns
+  no `constituent_series`; select `series_id` to get it.
 
 ## Exploratory queries first
 
